@@ -1,0 +1,948 @@
+name: Quantum Application E2E Pipeline
+
+on:
+  push:
+    branches: [ main, master ]
+    paths:
+      - 'source/circuits/**'
+      - '.github/workflows/e2e-pipeline.yml'
+  pull_request:
+    branches: [ main, master ]
+    paths:
+      - 'source/circuits/**'
+  workflow_dispatch:
+    inputs:
+      source_file:
+        description: 'Source file to process (relative to source/circuits/)'
+        required: false
+        default: ''
+      simulator:
+        description: 'Simulator to use (qiskit, cirq, braket)'
+        required: false
+        default: 'qiskit'
+      shots:
+        description: 'Number of shots for simulation'
+        required: false
+        default: '1024'
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    outputs:
+      source_files: ${{ steps.find-files.outputs.files }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install quantum-cli-sdk
+        run: |
+          python -m pip install --upgrade pip
+          pip install quantum-cli-sdk
+          pip install -r requirements.txt
+
+      - name: Find source files to process
+        id: find-files
+        run: |
+          if [ -n "${{ github.event.inputs.source_file }}" ]; then
+            echo "files=${{ github.event.inputs.source_file }}" >> $GITHUB_OUTPUT
+          else
+            # Find all Python files in source/circuits directory
+            FILES=$(find source/circuits -name "*.py" | sed 's/source\/circuits\///' | jq -R -s -c 'split("\n") | map(select(length > 0))')
+            echo "files=$FILES" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Configure Git
+        run: |
+          git config --local user.name "GitHub Actions"
+          git config --local user.email "actions@github.com"
+
+  generate-ir:
+    needs: setup
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        source_file: ${{ fromJson(needs.setup.outputs.source_files) }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install quantum-cli-sdk
+        run: |
+          python -m pip install --upgrade pip
+          pip install quantum-cli-sdk
+          pip install -r requirements.txt
+
+      - name: Configure Git
+        run: |
+          git config --local user.name "GitHub Actions"
+          git config --local user.email "actions@github.com"
+
+      - name: Generate IR from source
+        run: |
+          # Create base IR directory if it doesn't exist
+          mkdir -p ir/openqasm
+          
+          # Generate IR
+          quantum-cli ir generate \
+            --source source/circuits/${{ matrix.source_file }} \
+            --dest ir/openqasm/${{ matrix.source_file }}.qasm
+          
+          echo "Generated OpenQASM IR for ${{ matrix.source_file }}"
+
+      - name: Commit generated IR files
+        run: |
+          git add ir/openqasm/${{ matrix.source_file }}.qasm
+          git diff --staged --quiet || git commit -m "Generate OpenQASM for ${{ matrix.source_file }}"
+          git push || echo "No changes to push"
+
+  validate:
+    needs: [setup, generate-ir]
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        source_file: ${{ fromJson(needs.setup.outputs.source_files) }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install quantum-cli-sdk
+        run: |
+          python -m pip install --upgrade pip
+          pip install quantum-cli-sdk
+
+      - name: Configure Git
+        run: |
+          git config --local user.name "GitHub Actions"
+          git config --local user.email "actions@github.com"
+
+      - name: Validate OpenQASM files
+        run: |
+          # Create validation results directory
+          mkdir -p results/validation
+          
+          # Validate IR
+          quantum-cli ir validate \
+            ir/openqasm/${{ matrix.source_file }}.qasm \
+            --output results/validation/${{ matrix.source_file }}.json
+          
+          echo "Validated OpenQASM for ${{ matrix.source_file }}"
+
+      - name: Commit validation results
+        run: |
+          git add results/validation/${{ matrix.source_file }}.json
+          git diff --staged --quiet || git commit -m "Add validation results for ${{ matrix.source_file }}"
+          git push || echo "No changes to push"
+
+  security-scan:
+    needs: [setup, validate]
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        source_file: ${{ fromJson(needs.setup.outputs.source_files) }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install quantum-cli-sdk
+        run: |
+          python -m pip install --upgrade pip
+          pip install quantum-cli-sdk
+
+      - name: Configure Git
+        run: |
+          git config --local user.name "GitHub Actions"
+          git config --local user.email "actions@github.com"
+
+      - name: Security scan OpenQASM files
+        run: |
+          # Create security scan results directory
+          mkdir -p results/security_scan
+          
+          # Security scan
+          quantum-cli security scan \
+            ir/openqasm/${{ matrix.source_file }}.qasm \
+            --output results/security_scan/${{ matrix.source_file }}.json
+          
+          echo "Security scan completed for ${{ matrix.source_file }}"
+
+      - name: Commit security reports
+        run: |
+          git add results/security_scan/${{ matrix.source_file }}.json
+          git diff --staged --quiet || git commit -m "Add security report for ${{ matrix.source_file }}"
+          git push || echo "No changes to push"
+
+  simulate-base:
+    needs: [setup, security-scan]
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        source_file: ${{ fromJson(needs.setup.outputs.source_files) }}
+        platform: ["qiskit", "cirq", "braket"]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install quantum-cli-sdk
+        run: |
+          python -m pip install --upgrade pip
+          pip install quantum-cli-sdk
+
+      - name: Configure Git
+        run: |
+          git config --local user.name "GitHub Actions"
+          git config --local user.email "actions@github.com"
+
+      - name: Simulate base IR
+        run: |
+          # Create simulation results directory
+          mkdir -p results/simulation/base/${{ matrix.platform }}
+          
+          # Run simulation
+          quantum-cli run simulate \
+            ir/openqasm/${{ matrix.source_file }}.qasm \
+            --platform ${{ matrix.platform }} \
+            --shots ${{ github.event.inputs.shots || '1024' }} \
+            --output results/simulation/base/${{ matrix.platform }}/${{ matrix.source_file }}.json
+          
+          echo "Simulated base IR for ${{ matrix.source_file }} on ${{ matrix.platform }}"
+
+      - name: Commit simulation results
+        run: |
+          git add results/simulation/base/${{ matrix.platform }}/${{ matrix.source_file }}.json
+          git diff --staged --quiet || git commit -m "Add base simulation results for ${{ matrix.source_file }} on ${{ matrix.platform }}"
+          git push || echo "No changes to push"
+
+  optimize:
+    needs: [setup, simulate-base]
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        source_file: ${{ fromJson(needs.setup.outputs.source_files) }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install quantum-cli-sdk
+        run: |
+          python -m pip install --upgrade pip
+          pip install quantum-cli-sdk
+
+      - name: Configure Git
+        run: |
+          git config --local user.name "GitHub Actions"
+          git config --local user.email "actions@github.com"
+
+      - name: Optimize OpenQASM files
+        run: |
+          # Create optimized directory if it doesn't exist
+          mkdir -p ir/openqasm/optimized
+          
+          # Optimize circuits
+          quantum-cli ir optimize \
+            ir/openqasm/${{ matrix.source_file }}.qasm \
+            --output ir/openqasm/optimized/${{ matrix.source_file }}.qasm
+          
+          echo "Optimized OpenQASM for ${{ matrix.source_file }}"
+
+      - name: Commit optimized files
+        run: |
+          git add ir/openqasm/optimized/${{ matrix.source_file }}.qasm
+          git diff --staged --quiet || git commit -m "Add optimized circuit for ${{ matrix.source_file }}"
+          git push || echo "No changes to push"
+
+  simulate-optimized:
+    needs: [setup, optimize]
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        source_file: ${{ fromJson(needs.setup.outputs.source_files) }}
+        platform: ["qiskit", "cirq", "braket"]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install quantum-cli-sdk
+        run: |
+          python -m pip install --upgrade pip
+          pip install quantum-cli-sdk
+
+      - name: Configure Git
+        run: |
+          git config --local user.name "GitHub Actions"
+          git config --local user.email "actions@github.com"
+
+      - name: Simulate optimized IR
+        run: |
+          # Create simulation results directory
+          mkdir -p results/simulation/optimized/${{ matrix.platform }}
+          
+          # Run simulation
+          quantum-cli run simulate \
+            ir/openqasm/optimized/${{ matrix.source_file }}.qasm \
+            --platform ${{ matrix.platform }} \
+            --shots ${{ github.event.inputs.shots || '1024' }} \
+            --output results/simulation/optimized/${{ matrix.platform }}/${{ matrix.source_file }}.json
+          
+          echo "Simulated optimized IR for ${{ matrix.source_file }} on ${{ matrix.platform }}"
+
+      - name: Commit simulation results
+        run: |
+          git add results/simulation/optimized/${{ matrix.platform }}/${{ matrix.source_file }}.json
+          git diff --staged --quiet || git commit -m "Add optimized simulation results for ${{ matrix.source_file }} on ${{ matrix.platform }}"
+          git push || echo "No changes to push"
+
+  mitigate:
+    needs: [setup, simulate-optimized]
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        source_file: ${{ fromJson(needs.setup.outputs.source_files) }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install quantum-cli-sdk
+        run: |
+          python -m pip install --upgrade pip
+          pip install quantum-cli-sdk
+
+      - name: Configure Git
+        run: |
+          git config --local user.name "GitHub Actions"
+          git config --local user.email "actions@github.com"
+
+      - name: Error mitigation for OpenQASM files
+        run: |
+          # Create mitigated directory if it doesn't exist
+          mkdir -p ir/openqasm/mitigated
+          
+          # Apply error mitigation
+          quantum-cli ir mitigate \
+            ir/openqasm/optimized/${{ matrix.source_file }}.qasm \
+            --output ir/openqasm/mitigated/${{ matrix.source_file }}.qasm
+          
+          echo "Applied error mitigation to ${{ matrix.source_file }}"
+
+      - name: Commit mitigated files
+        run: |
+          git add ir/openqasm/mitigated/${{ matrix.source_file }}.qasm
+          git diff --staged --quiet || git commit -m "Add error-mitigated circuit for ${{ matrix.source_file }}"
+          git push || echo "No changes to push"
+
+  simulate-mitigated:
+    needs: [setup, mitigate]
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        source_file: ${{ fromJson(needs.setup.outputs.source_files) }}
+        platform: ["qiskit", "cirq", "braket"]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install quantum-cli-sdk
+        run: |
+          python -m pip install --upgrade pip
+          pip install quantum-cli-sdk
+
+      - name: Configure Git
+        run: |
+          git config --local user.name "GitHub Actions"
+          git config --local user.email "actions@github.com"
+
+      - name: Simulate mitigated IR
+        run: |
+          # Create simulation results directory
+          mkdir -p results/simulation/mitigated/${{ matrix.platform }}
+          
+          # Run simulation
+          quantum-cli run simulate \
+            ir/openqasm/mitigated/${{ matrix.source_file }}.qasm \
+            --platform ${{ matrix.platform }} \
+            --shots ${{ github.event.inputs.shots || '1024' }} \
+            --output results/simulation/mitigated/${{ matrix.platform }}/${{ matrix.source_file }}.json
+          
+          echo "Simulated mitigated IR for ${{ matrix.source_file }} on ${{ matrix.platform }}"
+
+      - name: Commit simulation results
+        run: |
+          git add results/simulation/mitigated/${{ matrix.platform }}/${{ matrix.source_file }}.json
+          git diff --staged --quiet || git commit -m "Add mitigated simulation results for ${{ matrix.source_file }} on ${{ matrix.platform }}"
+          git push || echo "No changes to push"
+
+  generate-tests:
+    needs: [setup, mitigate]
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        source_file: ${{ fromJson(needs.setup.outputs.source_files) }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install quantum-cli-sdk
+        run: |
+          python -m pip install --upgrade pip
+          pip install quantum-cli-sdk
+
+      - name: Configure Git
+        run: |
+          git config --local user.name "GitHub Actions"
+          git config --local user.email "actions@github.com"
+
+      - name: Generate tests
+        run: |
+          # Create tests directory if it doesn't exist
+          mkdir -p tests/unit
+          
+          # Generate tests
+          quantum-cli test generate \
+            ir/openqasm/mitigated/${{ matrix.source_file }}.qasm \
+            --output tests/unit/test_${{ matrix.source_file }}.py
+          
+          echo "Generated tests for ${{ matrix.source_file }}"
+
+      - name: Commit generated tests
+        run: |
+          git add tests/unit/test_${{ matrix.source_file }}.py
+          git diff --staged --quiet || git commit -m "Add tests for ${{ matrix.source_file }}"
+          git push || echo "No changes to push"
+
+  run-tests:
+    needs: [setup, generate-tests]
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        source_file: ${{ fromJson(needs.setup.outputs.source_files) }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install quantum-cli-sdk
+        run: |
+          python -m pip install --upgrade pip
+          pip install quantum-cli-sdk
+          pip install pytest
+
+      - name: Configure Git
+        run: |
+          git config --local user.name "GitHub Actions"
+          git config --local user.email "actions@github.com"
+
+      - name: Run tests
+        run: |
+          # Create test results directory
+          mkdir -p results/tests/unit/ir
+          
+          # Run tests
+          quantum-cli test run \
+            tests/unit/test_${{ matrix.source_file }}.py \
+            --output results/tests/unit/ir/${{ matrix.source_file }}.json
+          
+          echo "Ran tests for ${{ matrix.source_file }}"
+
+      - name: Commit test results
+        run: |
+          git add results/tests/unit/ir/${{ matrix.source_file }}.json
+          git diff --staged --quiet || git commit -m "Add test results for ${{ matrix.source_file }}"
+          git push || echo "No changes to push"
+
+  resource-estimation:
+    needs: [setup, run-tests]
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        source_file: ${{ fromJson(needs.setup.outputs.source_files) }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install quantum-cli-sdk
+        run: |
+          python -m pip install --upgrade pip
+          pip install quantum-cli-sdk
+
+      - name: Configure Git
+        run: |
+          git config --local user.name "GitHub Actions"
+          git config --local user.email "actions@github.com"
+
+      - name: Estimate resources
+        run: |
+          # Create resource estimation directory
+          mkdir -p results/resource_estimation
+          
+          # Estimate resources
+          quantum-cli analyze resources \
+            ir/openqasm/mitigated/${{ matrix.source_file }}.qasm \
+            --output results/resource_estimation/${{ matrix.source_file }}.json
+          
+          echo "Estimated resources for ${{ matrix.source_file }}"
+
+      - name: Commit resource estimation
+        run: |
+          git add results/resource_estimation/${{ matrix.source_file }}.json
+          git diff --staged --quiet || git commit -m "Add resource estimation for ${{ matrix.source_file }}"
+          git push || echo "No changes to push"
+
+  benchmark:
+    needs: [setup, run-tests]
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        source_file: ${{ fromJson(needs.setup.outputs.source_files) }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install quantum-cli-sdk
+        run: |
+          python -m pip install --upgrade pip
+          pip install quantum-cli-sdk
+
+      - name: Configure Git
+        run: |
+          git config --local user.name "GitHub Actions"
+          git config --local user.email "actions@github.com"
+
+      - name: Benchmark circuit
+        run: |
+          # Create benchmark directory
+          mkdir -p reports/visualization/benchmark
+          
+          # Benchmark
+          quantum-cli analyze benchmark \
+            ir/openqasm/mitigated/${{ matrix.source_file }}.qasm \
+            --output reports/visualization/benchmark/${{ matrix.source_file }}.json
+          
+          echo "Benchmarked circuit for ${{ matrix.source_file }}"
+
+      - name: Commit benchmark results
+        run: |
+          git add reports/visualization/benchmark/${{ matrix.source_file }}.json
+          git diff --staged --quiet || git commit -m "Add benchmark for ${{ matrix.source_file }}"
+          git push || echo "No changes to push"
+
+  cost-estimation:
+    needs: [setup, resource-estimation]
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        source_file: ${{ fromJson(needs.setup.outputs.source_files) }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install quantum-cli-sdk
+        run: |
+          python -m pip install --upgrade pip
+          pip install quantum-cli-sdk
+
+      - name: Configure Git
+        run: |
+          git config --local user.name "GitHub Actions"
+          git config --local user.email "actions@github.com"
+
+      - name: Estimate cost
+        run: |
+          # Create cost estimation directory
+          mkdir -p results/cost_estimation
+          
+          # Estimate cost
+          quantum-cli analyze cost \
+            ir/openqasm/mitigated/${{ matrix.source_file }}.qasm \
+            --output results/cost_estimation/${{ matrix.source_file }}.json
+          
+          echo "Estimated cost for ${{ matrix.source_file }}"
+
+      - name: Commit cost estimation
+        run: |
+          git add results/cost_estimation/${{ matrix.source_file }}.json
+          git diff --staged --quiet || git commit -m "Add cost estimation for ${{ matrix.source_file }}"
+          git push || echo "No changes to push"
+
+  finetune:
+    needs: [setup, cost-estimation, benchmark]
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        source_file: ${{ fromJson(needs.setup.outputs.source_files) }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install quantum-cli-sdk
+        run: |
+          python -m pip install --upgrade pip
+          pip install quantum-cli-sdk
+
+      - name: Configure Git
+        run: |
+          git config --local user.name "GitHub Actions"
+          git config --local user.email "actions@github.com"
+
+      - name: Fine-tune circuit
+        run: |
+          # Create finetuning results directory
+          mkdir -p results/finetuning
+          
+          # Fine-tune circuit
+          quantum-cli ir finetune \
+            ir/openqasm/mitigated/${{ matrix.source_file }}.qasm \
+            --output results/finetuning/${{ matrix.source_file }}.json
+          
+          echo "Fine-tuned circuit for ${{ matrix.source_file }}"
+
+      - name: Commit finetuning results
+        run: |
+          git add results/finetuning/${{ matrix.source_file }}.json
+          git diff --staged --quiet || git commit -m "Add finetuning results for ${{ matrix.source_file }}"
+          git push || echo "No changes to push"
+
+  generate-microservice:
+    needs: [setup, finetune]
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        source_file: ${{ fromJson(needs.setup.outputs.source_files) }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install quantum-cli-sdk
+        run: |
+          python -m pip install --upgrade pip
+          pip install quantum-cli-sdk
+
+      - name: Configure Git
+        run: |
+          git config --local user.name "GitHub Actions"
+          git config --local user.email "actions@github.com"
+
+      - name: Generate microservice
+        run: |
+          # Get base name without extension
+          BASE_NAME=$(echo "${{ matrix.source_file }}" | sed 's/\.py$//')
+          
+          # Create microservice directories
+          mkdir -p microservice/circuits
+          mkdir -p microservice/source
+          
+          # Copy mitigated IR to microservice/circuits
+          cp ir/openqasm/mitigated/${{ matrix.source_file }}.qasm microservice/circuits/
+          
+          # Generate microservice
+          quantum-cli service generate \
+            ir/openqasm/mitigated/${{ matrix.source_file }}.qasm \
+            --output-dir microservice/source/$BASE_NAME
+          
+          echo "Generated microservice for ${{ matrix.source_file }}"
+
+      - name: Commit microservice files
+        run: |
+          git add microservice/circuits/${{ matrix.source_file }}.qasm
+          git add microservice/source/
+          git diff --staged --quiet || git commit -m "Add microservice for ${{ matrix.source_file }}"
+          git push || echo "No changes to push"
+
+  generate-microservice-tests:
+    needs: [setup, generate-microservice]
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        source_file: ${{ fromJson(needs.setup.outputs.source_files) }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install quantum-cli-sdk
+        run: |
+          python -m pip install --upgrade pip
+          pip install quantum-cli-sdk
+
+      - name: Configure Git
+        run: |
+          git config --local user.name "GitHub Actions"
+          git config --local user.email "actions@github.com"
+
+      - name: Generate microservice tests
+        run: |
+          # Get base name without extension
+          BASE_NAME=$(echo "${{ matrix.source_file }}" | sed 's/\.py$//')
+          
+          # Generate microservice tests
+          quantum-cli service test-generate \
+            microservice/source/$BASE_NAME \
+            --output microservice/tests
+          
+          echo "Generated microservice tests for ${{ matrix.source_file }}"
+
+      - name: Commit microservice tests
+        run: |
+          git add microservice/tests
+          git diff --staged --quiet || git commit -m "Add microservice tests for ${{ matrix.source_file }}"
+          git push || echo "No changes to push"
+
+  run-microservice-tests:
+    needs: [setup, generate-microservice-tests]
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        source_file: ${{ fromJson(needs.setup.outputs.source_files) }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install Docker
+        uses: docker/setup-buildx-action@v2
+
+      - name: Install quantum-cli-sdk
+        run: |
+          python -m pip install --upgrade pip
+          pip install quantum-cli-sdk
+
+      - name: Configure Git
+        run: |
+          git config --local user.name "GitHub Actions"
+          git config --local user.email "actions@github.com"
+
+      - name: Run microservice tests
+        run: |
+          # Get base name without extension
+          BASE_NAME=$(echo "${{ matrix.source_file }}" | sed 's/\.py$//')
+          
+          # Create results directory
+          mkdir -p results/tests/microservice
+          
+          # Build and run tests in container
+          quantum-cli service test-run \
+            microservice/source/$BASE_NAME \
+            --test-dir microservice/tests \
+            --output results/tests/microservice/${{ matrix.source_file }}.json
+          
+          echo "Ran microservice tests for ${{ matrix.source_file }}"
+
+      - name: Commit microservice test results
+        run: |
+          git add results/tests/microservice/${{ matrix.source_file }}.json
+          git diff --staged --quiet || git commit -m "Add microservice test results for ${{ matrix.source_file }}"
+          git push || echo "No changes to push"
+
+  package:
+    needs: [setup, run-microservice-tests]
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        source_file: ${{ fromJson(needs.setup.outputs.source_files) }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install quantum-cli-sdk
+        run: |
+          python -m pip install --upgrade pip
+          pip install quantum-cli-sdk
+
+      - name: Configure Git
+        run: |
+          git config --local user.name "GitHub Actions"
+          git config --local user.email "actions@github.com"
+
+      - name: Package application
+        run: |
+          # Get base name without extension
+          BASE_NAME=$(echo "${{ matrix.source_file }}" | sed 's/\.py$//')
+          
+          # Create dist directory
+          mkdir -p dist
+          
+          # Package application
+          quantum-cli package create \
+            --source-dir microservice/source/$BASE_NAME \
+            --circuit-file ir/openqasm/mitigated/${{ matrix.source_file }}.qasm \
+            --metadata-file results/resource_estimation/${{ matrix.source_file }}.json \
+            --output-path dist/$BASE_NAME.zip
+          
+          echo "Packaged application for ${{ matrix.source_file }}"
+
+      - name: Commit package
+        run: |
+          git add dist/$BASE_NAME.zip
+          git diff --staged --quiet || git commit -m "Add package for ${{ matrix.source_file }}"
+          git push || echo "No changes to push"
+
+  publish:
+    needs: [setup, package]
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        source_file: ${{ fromJson(needs.setup.outputs.source_files) }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install quantum-cli-sdk
+        run: |
+          python -m pip install --upgrade pip
+          pip install quantum-cli-sdk
+
+      - name: Publish to Quantum Hub
+        env:
+          QUANTUM_HUB_USERNAME: ${{ secrets.QUANTUM_HUB_USERNAME }}
+          QUANTUM_HUB_TOKEN: ${{ secrets.QUANTUM_HUB_TOKEN }}
+        run: |
+          # Get base name without extension
+          BASE_NAME=$(echo "${{ matrix.source_file }}" | sed 's/\.py$//')
+          
+          # Check if credentials are available
+          if [ -n "${QUANTUM_HUB_USERNAME}" ] && [ -n "${QUANTUM_HUB_TOKEN}" ]; then
+            # Publish to Quantum Hub
+            quantum-cli hub publish \
+              dist/$BASE_NAME.zip \
+              --username "${QUANTUM_HUB_USERNAME}" \
+              --token "${QUANTUM_HUB_TOKEN}"
+            
+            echo "Published ${{ matrix.source_file }} to Quantum Hub"
+          else
+            echo "Quantum Hub credentials not found. Skipping publish step."
+          fi         
