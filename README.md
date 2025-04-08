@@ -86,7 +86,7 @@ The included GitHub Actions workflow automates the quantum development process:
 
 ## 📋 Customization
 
-- Modify `.github/workflows/quantum-pipeline.yml` to customize the CI/CD pipeline
+- Modify `.github/workflows/e2e-pipeline.yml` to customize the CI/CD pipeline
 - Adjust `requirements.txt` to add dependencies specific to your project
 - Create custom test cases in the `tests/` directory to supplement generated tests
 
