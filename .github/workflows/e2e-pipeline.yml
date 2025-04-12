@@ -68,7 +68,7 @@ jobs:
             echo "files=[\"${{ github.event.inputs.source_file }}\"]" >> $GITHUB_OUTPUT
           else
             # Find all Python files, remove prefix, create JSON array
-            FILES=$(find source/circuits -name "*.py" | sed 's/source\\/circuits\\///' | jq -R -s -c 'split("\n") | map(select(length > 0))')
+            FILES=$(find source/circuits -name "*.py" | sed 's|^source/circuits/||' | jq -R -s -c 'split("\n") | map(select(length > 0))')
             echo "files=$FILES" >> $GITHUB_OUTPUT
           fi
 
