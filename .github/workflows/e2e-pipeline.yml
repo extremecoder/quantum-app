@@ -111,15 +111,17 @@ jobs:
         run: |
           
           mkdir -p ir/openqasm/base
+          BASE_NAME=$(echo "${{ matrix.source_file }}" | sed 's/\.py$//')
           quantum-cli ir generate \
             --source source/circuits/${{ matrix.source_file }} \
-            --dest ir/openqasm/base/${{ matrix.source_file }}.qasm
+            --dest ir/openqasm/base/$BASE_NAME.qasm
           echo "Generated Base OpenQASM IR for ${{ matrix.source_file }} in openqasm directory"
 
       - name: Commit generated IR
         run: |
           
-          git add ir/openqasm/base/${{ matrix.source_file }}.qasm
+          BASE_NAME=$(echo "${{ matrix.source_file }}" | sed 's/\.py$//')
+          git add ir/openqasm/base/$BASE_NAME.qasm
           # Commit only if changes detected
           git diff --staged --quiet || git commit -m "ci: Generate base OpenQASM for ${{ matrix.source_file }}"
           # Retry push on transient errors
@@ -155,7 +157,8 @@ jobs:
         run: |
           mkdir -p results/validation
          
-          OPENQASM_FILE="ir/openqasm/base/${{ matrix.source_file }}.qasm"
+          BASE_NAME=$(echo "${{ matrix.source_file }}" | sed 's/\.py$//')
+          OPENQASM_FILE="ir/openqasm/base/$BASE_NAME.qasm"
           if [ -f "$OPENQASM_FILE" ]; then
             quantum-cli ir validate \
               "$OPENQASM_FILE" \
@@ -205,7 +208,8 @@ jobs:
           mkdir -p results/security
           
           # First check the default output location
-          BASE_FILE="ir/openqasm/base/${{ matrix.source_file }}.qasm"
+          BASE_NAME=$(echo "${{ matrix.source_file }}" | sed 's/\.py$//')
+          BASE_FILE="ir/openqasm/base/$BASE_NAME.qasm"
           if [ -f "$BASE_FILE" ]; then
             quantum-cli security scan \
               "$BASE_FILE" \
@@ -217,7 +221,7 @@ jobs:
           fi
           
           # Also check the openqasm directory for backward compatibility
-          OPENQASM_FILE="ir/openqasm/base/${{ matrix.source_file }}.qasm"
+          OPENQASM_FILE="ir/openqasm/base/$BASE_NAME.qasm"
           if [ -f "$OPENQASM_FILE" ]; then
             quantum-cli security scan \
               "$OPENQASM_FILE" \
@@ -272,7 +276,8 @@ jobs:
        
           
           # Also try the openqasm directory for backward compatibility
-          OPENQASM_FILE="ir/openqasm/base/${{ matrix.source_file }}.qasm"
+          BASE_NAME=$(echo "${{ matrix.source_file }}" | sed 's/\.py$//')
+          OPENQASM_FILE="ir/openqasm/base/$BASE_NAME.qasm"
           if [ -f "$OPENQASM_FILE" ]; then
             # Standard optimization (level 2)
             quantum-cli ir optimize \
@@ -379,15 +384,16 @@ jobs:
       - name: Simulate Base IR on ${{ matrix.platform }}
         run: |
           mkdir -p results/simulation/base/${{ matrix.platform }}
-          if [ -f "ir/openqasm/${{ matrix.source_file }}.qasm" ]; then
+          BASE_NAME=$(echo "${{ matrix.source_file }}" | sed 's/\.py$//')
+          if [ -f "ir/openqasm/base/$BASE_NAME.qasm" ]; then
             quantum-cli run simulate \
-              ir/openqasm/base/${{ matrix.source_file }}.qasm \
+              ir/openqasm/base/$BASE_NAME.qasm \
               --backend ${{ matrix.platform }} \
               --shots ${{ needs.setup.outputs.shots }} \
               --output results/simulation/base/${{ matrix.platform }}/${{ matrix.source_file }}.json
             echo "Simulated base IR for ${{ matrix.source_file }} on ${{ matrix.platform }}"
           else
-            echo "Skipping base simulation, IR file not found: ir/openqasm/${{ matrix.source_file }}.qasm"
+            echo "Skipping base simulation, IR file not found: ir/openqasm/base/$BASE_NAME.qasm"
             mkdir -p results/simulation/base/${{ matrix.platform }} && echo '{"status": "skipped", "reason": "Input IR file not found"}' > results/simulation/base/${{ matrix.platform }}/${{ matrix.source_file }}.json
           fi
 
