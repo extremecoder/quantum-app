@@ -111,7 +111,7 @@ jobs:
         run: |
           
           mkdir -p ir/openqasm/base
-          quantum-cli ir generate \ 
+          quantum-cli ir generate \
             --source source/circuits/${{ matrix.source_file }} \
             --dest ir/openqasm/base/${{ matrix.source_file }}.qasm
           echo "Generated Base OpenQASM IR for ${{ matrix.source_file }} in openqasm directory"
@@ -355,10 +355,7 @@ jobs:
     strategy:
       matrix:
         source_file: ${{ fromJson(needs.setup.outputs.source_files) }}
-        # Use simulator from setup job outputs (respecting workflow_dispatch)
-        platform: [ ${{ needs.setup.outputs.simulator }} ]
-        # Allow specifying multiple platforms if needed in future via matrix or input array
-        # platform: ["qiskit", "cirq", "braket"]
+        platform: ["${{ needs.setup.outputs.simulator }}"]
       fail-fast: false
     steps:
       - name: Checkout repository
@@ -407,7 +404,7 @@ jobs:
     strategy:
       matrix:
         source_file: ${{ fromJson(needs.setup.outputs.source_files) }}
-        platform: [ ${{ needs.setup.outputs.simulator }} ]
+        platform: ["${{ needs.setup.outputs.simulator }}"]
       fail-fast: false
     steps:
       - name: Checkout repository
@@ -456,7 +453,7 @@ jobs:
     strategy:
       matrix:
         source_file: ${{ fromJson(needs.setup.outputs.source_files) }}
-        platform: [ ${{ needs.setup.outputs.simulator }} ]
+        platform: ["${{ needs.setup.outputs.simulator }}"]
       fail-fast: false
     steps:
       - name: Checkout repository
@@ -1094,7 +1091,7 @@ jobs:
             echo "Published $PACKAGE_PATH to Quantum Hub"
           fi
 
-  Optional: Job to delete the enhanced pipeline file if this one is stable
+  #Optional: Job to delete the enhanced pipeline file if this one is stable
   cleanup-old-pipeline:
     needs: [publish] # Run after everything else successfully finishes
     runs-on: ubuntu-latest
