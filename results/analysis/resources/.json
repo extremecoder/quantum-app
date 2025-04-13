@@ -1,0 +1,39 @@
+{
+  "circuit_name": "shors_factoring_15_compatible",
+  "qubit_count": 8,
+  "gate_counts": {
+    "total": 25,
+    "single_qubit": 9,
+    "two_qubit": 12,
+    "multi_qubit": 0,
+    "h": 8,
+    "x": 1,
+    "y": 0,
+    "z": 0,
+    "cx": 4,
+    "cz": 6,
+    "swap": 2,
+    "t": 0,
+    "tdg": 0,
+    "s": 0,
+    "sdg": 0,
+    "rx": 0,
+    "ry": 0,
+    "rz": 0,
+    "u1": 0,
+    "u2": 0,
+    "u3": 0,
+    "measure": 4,
+    "barrier": 0,
+    "other": 0
+  },
+  "circuit_depth": 13,
+  "critical_path_length": 13,
+  "t_depth": 0,
+  "estimated_runtime": {
+    "superconducting": "~1.9 \u03bcs",
+    "ion_trap": "~650.0 \u03bcs",
+    "photonic": "~265.0 \u03bcs"
+  },
+  "error_probability_estimate": 0.1897556114105895
+}
