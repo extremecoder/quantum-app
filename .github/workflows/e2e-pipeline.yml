@@ -1,11 +1,11 @@
 name: Quantum Application E2E Pipeline
 
 on:
-  push:
-    branches: [ main, master ]
-    paths:
-      - 'source/circuits/**'
-      - '.github/workflows/e2e-pipeline.yml'
+  # push:
+  #   branches: [ main, master ]
+  #   paths:
+  #     - 'source/circuits/**'
+  #     - '.github/workflows/e2e-pipeline.yml'
   pull_request:
     branches: [ main, master ]
     paths:
