@@ -594,6 +594,8 @@ jobs:
           git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
       - name: Generate Unit Tests from Mitigated IR
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
           # Standardized path
           mkdir -p tests/generated
