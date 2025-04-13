@@ -161,6 +161,10 @@ jobs:
           git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
       - name: Generate Base OpenQASM IR # IR generation
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          IBM_QUANTUM_TOKEN: ${{ secrets.IBM_QUANTUM_TOKEN }}
+          TOGETHER_API_KEY: ${{ secrets.TOGETHER_API_KEY }}
         run: |
           
           mkdir -p ir/openqasm/base
@@ -320,6 +324,10 @@ jobs:
           git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
       - name: Optimize Base OpenQASM IR
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          IBM_QUANTUM_TOKEN: ${{ secrets.IBM_QUANTUM_TOKEN }}
+          TOGETHER_API_KEY: ${{ secrets.TOGETHER_API_KEY }}
         run: |
           mkdir -p ir/openqasm/optimized
        
@@ -378,6 +386,10 @@ jobs:
           git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
       - name: Apply Error Mitigation to Optimized IR
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          IBM_QUANTUM_TOKEN: ${{ secrets.IBM_QUANTUM_TOKEN }}
+          TOGETHER_API_KEY: ${{ secrets.TOGETHER_API_KEY }}
         run: |
           mkdir -p ir/openqasm/mitigated
           # Use the optimized IR as input
@@ -605,6 +617,8 @@ jobs:
       - name: Generate Unit Tests from Mitigated IR
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          IBM_QUANTUM_TOKEN: ${{ secrets.IBM_QUANTUM_TOKEN }}
+          TOGETHER_API_KEY: ${{ secrets.TOGETHER_API_KEY }}
         run: |
           # Standardized path
           mkdir -p tests/generated
@@ -856,7 +870,7 @@ jobs:
   finetune:
     # Update dependencies since service jobs are commented out
     # Depends on completing cost estimation and benchmarking
-    needs: [cost-estimation, benchmark]
+    needs: [setup, cost-estimation, benchmark]
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -882,15 +896,23 @@ jobs:
           git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
       - name: Fine-tune Mitigated Circuit
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          IBM_QUANTUM_TOKEN: ${{ secrets.IBM_QUANTUM_TOKEN }}
+          TOGETHER_API_KEY: ${{ secrets.TOGETHER_API_KEY }}
         run: |
           # Standardized path
           mkdir -p results/finetune
+          
+          
           # Assumes fine-tuning takes mitigated IR and potentially analysis results
           if [ -f "ir/openqasm/mitigated/$BASE_NAME.qasm" ]; then
             quantum-cli ir finetune \
               --input-file ir/openqasm/mitigated/$BASE_NAME.qasm \
-              # --output-file results/analysis/finetuning/$BASE_NAME\_finetune_results.json \
-              --hardware ibm
+              # --output-file results/analysis/finetune/${BASE_NAME}_finetune_results.json \
+              --hardware ibm \
+              --use-hardware \
+              --device-id ibmq_manila
             echo "Fine-tuned mitigated circuit for ${{ matrix.source_file }}"
           else
             echo "Skipping fine-tuning, mitigated IR not found: ir/openqasm/mitigated/$BASE_NAME.qasm"
