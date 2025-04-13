@@ -568,7 +568,7 @@ jobs:
   # --------------------------------------------------------------------------
   generate-tests:
     # Generate tests based on the final mitigated IR
-    needs: mitigate
+    needs: [setup, mitigate]
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -615,8 +615,8 @@ jobs:
           
           # Only add if the file was actually generated
           BASE_NAME=$(echo "${{ matrix.source_file }}" | sed 's/\.py$//')
-          if [ -f "tests/generated/${BASE_NAME}_test.py" ]; then
-            git add tests/generated/${BASE_NAME}_test.py
+          if [ -f "tests/generated/$BASE_NAME_test.py" ]; then
+            git add tests/generated/$BASE_NAME_test.py
             git_safe_push "ci: Add generated unit tests for $BASE_NAME.qasm" "generated tests for ${{ matrix.source_file }}"
           else
             echo "No generated test file to commit for $BASE_NAME.qasm"
@@ -624,7 +624,7 @@ jobs:
 
   run-tests:
     # Run tests after they are generated
-    needs: generate-tests
+    needs: [setup, generate-tests]
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -654,8 +654,8 @@ jobs:
           # Standardized path for results
           mkdir -p results/tests/unit
           BASE_NAME=$(echo "${{ matrix.source_file }}" | sed 's/\.py$//')
-          TEST_FILE="tests/generated/${BASE_NAME}_test.py"
-          RESULT_FILE="results/tests/unit/${BASE_NAME}_test_results.json"
+          TEST_FILE="tests/generated/$BASE_NAME_test.py"
+          RESULT_FILE="results/tests/unit/$BASE_NAME_test_results.json"
 
           if [ -f "$TEST_FILE" ]; then
             # Use our newly implemented test run command
@@ -674,7 +674,7 @@ jobs:
           eval "$GIT_PUSH_FUNCTION"
           
           BASE_NAME=$(echo "${{ matrix.source_file }}" | sed 's/\.py$//')
-          git add results/tests/unit/${BASE_NAME}_test_results.json
+          git add results/tests/unit/$BASE_NAME_test_results.json
           git_safe_push "ci: Add unit test results for $TEST_FILE" "unit test results for ${{ matrix.source_file }}"
 
   # --------------------------------------------------------------------------
@@ -682,7 +682,7 @@ jobs:
   # --------------------------------------------------------------------------
   resource-estimation:
     # Analyze the mitigated IR after tests pass (or are skipped)
-    needs: [mitigate, run-tests] # Depends on mitigated IR and test execution completion
+    needs: [setup, mitigate, run-tests] # Depends on mitigated IR and test execution completion
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -715,7 +715,7 @@ jobs:
           if [ -f "ir/openqasm/mitigated/$BASE_NAME.qasm" ]; then
             quantum-cli analyze resources \
               ir/openqasm/mitigated/$BASE_NAME.qasm \
-              --output results/analysis/resources/${BASE_NAME}_resources.json \
+              --output results/analysis/resources/$BASE_NAME_resources.json \
               --format json
             echo "Estimated resources for mitigated IR: $BASE_NAME.qasm"
           else
@@ -729,12 +729,12 @@ jobs:
           eval "$GIT_PUSH_FUNCTION"
           
           BASE_NAME=$(echo "${{ matrix.source_file }}" | sed 's/\.py$//')
-          git add results/analysis/resources/${BASE_NAME}_resources.json
-          git_safe_push "ci: Add resource estimation result ${BASE_NAME}_resources.json" "resource estimation for ${{ matrix.source_file }}"
+          git add results/analysis/resources/$BASE_NAME_resources.json
+          git_safe_push "ci: Add resource estimation result $BASE_NAME_resources.json" "resource estimation for ${{ matrix.source_file }}"
 
   cost-estimation:
     # Depends on resource estimation
-    needs: resource-estimation
+    needs: [setup, resource-estimation]
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -764,11 +764,12 @@ jobs:
           # Standardized path
           mkdir -p results/analysis/cost
           # Assumes cost estimation takes the IR file as input
+          BASE_NAME=$(echo "${{ matrix.source_file }}" | sed 's/\.py$//')
           if [ -f "ir/openqasm/mitigated/$BASE_NAME.qasm" ]; then
             quantum-cli analyze cost \
               ir/openqasm/mitigated/$BASE_NAME.qasm \
               --resource-file results/analysis/resources/$BASE_NAME_resources.json \
-              --output results/analysis/cost/$BASE_NAME\_cost.json \
+              --output results/analysis/cost/$BASE_NAME_cost.json \
               --format json
             echo "Estimated cost for mitigated IR: $BASE_NAME.qasm"
           else
@@ -787,7 +788,7 @@ jobs:
 
   benchmark:
     # Analyze the mitigated IR after tests pass (or are skipped)
-    needs: [mitigate, run-tests] # Depends on mitigated IR and test execution
+    needs: [setup, mitigate, run-tests] # Depends on mitigated IR and test execution
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -816,11 +817,12 @@ jobs:
         run: |
           # Standardized path
           mkdir -p results/analysis/benchmark
+          BASE_NAME=$(echo "${{ matrix.source_file }}" | sed 's/\.py$//')
           if [ -f "ir/openqasm/mitigated/$BASE_NAME.qasm" ]; then
             quantum-cli analyze benchmark \
               ir/openqasm/mitigated/$BASE_NAME.qasm \
-              --output results/analysis/benchmark/$BASE_NAME\_benchmark.json
-            echo "Benchmarked mitigated circuit for ${{ matrix.source_file }}"
+              --output results/analysis/benchmark/$BASE_NAME_benchmark.json
+            echo "Benchmarked mitigated circuit for $BASE_NAME.qasm"
           else
             echo "Skipping benchmark, mitigated IR not found: ir/openqasm/mitigated/$BASE_NAME.qasm"
             mkdir -p results/analysis/benchmark && echo '{"status": "skipped", "reason": "Input IR file not found"}' > results/analysis/benchmark/$BASE_NAME.json
@@ -832,9 +834,9 @@ jobs:
           eval "$GIT_PUSH_FUNCTION"
           
           BASE_NAME=$(echo "${{ matrix.source_file }}" | sed 's/\.py$//')
-          git add results/analysis/benchmark/$BASE_NAME\_benchmark.json
+          git add results/analysis/benchmark/$BASE_NAME_benchmark.json
           git add results/analysis/benchmark/
-          git_safe_push "ci: Add benchmark results for ${{ matrix.source_file }}" "benchmark results for ${{ matrix.source_file }}"
+          git_safe_push "ci: Add benchmark results for $BASE_NAME.qasm" "benchmark results for ${{ matrix.source_file }}"
 
   finetune:
     # Update dependencies since service jobs are commented out
