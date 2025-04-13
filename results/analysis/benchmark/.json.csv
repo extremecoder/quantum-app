@@ -1,2 +1,0 @@
-source,simulator,shots,success,execution_time,circuit_depth,circuit_width,fidelity
-direct_run,qiskit_aer,1000,True,0.44104743003845215,13,8,0
