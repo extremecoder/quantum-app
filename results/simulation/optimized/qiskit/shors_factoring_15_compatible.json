@@ -1,1 +1,15 @@
-{"status": "skipped", "reason": "Input IR file not found"}
+{
+  "platform": "qiskit",
+  "shots": 1024,
+  "counts": {
+    "0011": 276,
+    "0010": 243,
+    "0000": 219,
+    "0001": 286
+  },
+  "metadata": {
+    "status": "COMPLETED",
+    "total_cli_execution_time_sec": 0.29638099670410156,
+    "source_file": "ir/openqasm/optimized/shors_factoring_15_compatible.qasm"
+  }
+}
