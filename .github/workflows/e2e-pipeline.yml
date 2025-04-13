@@ -726,7 +726,7 @@ jobs:
             quantum-cli analyze resources \
               ir/openqasm/mitigated/$BASE_NAME.qasm \
               # --output results/analysis/resources/${BASE_NAME}_resources.json \
-              --format json
+              # --format json
             echo "Estimated resources for mitigated IR: $BASE_NAME.qasm"
           else
              echo "Skipping resource estimation, mitigated IR not found: ir/openqasm/mitigated/$BASE_NAME.qasm"
@@ -781,7 +781,7 @@ jobs:
               ir/openqasm/mitigated/$BASE_NAME.qasm \
               --resource-file results/analysis/resources/${BASE_NAME}_resources.json \
               # --output results/analysis/cost/${BASE_NAME}_cost.json \
-              --format json
+              # --format json
             echo "Estimated cost for mitigated IR: $BASE_NAME.qasm"
           else
              echo "Skipping cost estimation, mitigated IR not found: ir/openqasm/mitigated/$BASE_NAME.qasm"
