@@ -1,1 +1,13 @@
-{"status": "skipped", "reason": "Input IR file not found"}
+{
+  "platform": "qiskit",
+  "shots": 1024,
+  "counts": {
+    "11": 496,
+    "00": 528
+  },
+  "metadata": {
+    "status": "COMPLETED",
+    "total_cli_execution_time_sec": 0.3684825897216797,
+    "source_file": "ir/openqasm/base/my_circuit.qasm"
+  }
+}
