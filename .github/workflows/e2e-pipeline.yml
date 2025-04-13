@@ -211,6 +211,7 @@ jobs:
          
           BASE_NAME=$(echo "${{ matrix.source_file }}" | sed 's/\.py$//')
           OPENQASM_FILE="ir/openqasm/base/$BASE_NAME.qasm"
+          echo "OPENQASM_FILE: $OPENQASM_FILE"
           if [ -f "$OPENQASM_FILE" ]; then
             quantum-cli ir validate \
               "$OPENQASM_FILE" \
@@ -266,6 +267,7 @@ jobs:
           BASE_FILE="ir/openqasm/base/$BASE_NAME.qasm"
           
           OPENQASM_FILE="ir/openqasm/base/$BASE_NAME.qasm"
+          echo "OPENQASM_FILE: $OPENQASM_FILE"
           if [ -f "$OPENQASM_FILE" ]; then
             quantum-cli security scan \
               "$OPENQASM_FILE" \
@@ -325,6 +327,7 @@ jobs:
           # Also try the openqasm directory for backward compatibility
           BASE_NAME=$(echo "${{ matrix.source_file }}" | sed 's/\.py$//')
           OPENQASM_FILE="ir/openqasm/base/$BASE_NAME.qasm"
+          echo "OPENQASM_FILE: $OPENQASM_FILE"
           if [ -f "$OPENQASM_FILE" ]; then
             # Standard optimization (level 2)
             quantum-cli ir optimize \
