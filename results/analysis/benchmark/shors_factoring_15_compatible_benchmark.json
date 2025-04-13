@@ -1,0 +1,62 @@
+{
+  "timestamp": "2025-04-13T13:03:30.925573",
+  "metrics": {
+    "num_results": 1,
+    "simulators": [
+      "qiskit_aer"
+    ],
+    "platforms": [],
+    "total_shots": 1000,
+    "success_rate": 1.0,
+    "error_rate": 0.0,
+    "execution_times": [
+      0.5049333572387695
+    ],
+    "circuit_depths": [
+      13
+    ],
+    "circuit_widths": [
+      8
+    ],
+    "gate_counts": {
+      "h": 8,
+      "cz": 6,
+      "cx": 4,
+      "measure": 4,
+      "swap": 2,
+      "x": 1,
+      "total": 25
+    },
+    "distribution_fidelities": [],
+    "detailed_metrics": [
+      {
+        "source": "direct_run",
+        "simulator": "qiskit_aer",
+        "shots": 1000,
+        "success": true,
+        "execution_time": 0.5049333572387695,
+        "circuit_depth": 13,
+        "circuit_width": 8,
+        "fidelity": 0
+      }
+    ]
+  },
+  "visualizations": [
+    "execution_time_distribution.png",
+    "circuit_depth_distribution.png",
+    "gate_counts.png",
+    "success_rate.png",
+    "platform_distribution.png"
+  ],
+  "summary": {
+    "num_results": 1,
+    "success_rate": 1.0,
+    "platforms_used": [
+      "qiskit_aer"
+    ],
+    "total_shots": 1000,
+    "avg_execution_time": 0.5049333572387695,
+    "avg_circuit_depth": 13.0,
+    "avg_circuit_width": 8.0
+  }
+}
