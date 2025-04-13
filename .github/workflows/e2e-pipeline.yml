@@ -283,7 +283,7 @@ jobs:
           
           # Standardized path
           BASE_NAME=$(echo "${{ matrix.source_file }}" | sed 's/\.py$//')
-          git add results/security/$BASE_NAME\_base.json
+          # git add results/security/$BASE_NAME\_base.json
           git add results/security/$BASE_NAME.json
           git_safe_push "ci: Add security report for $BASE_NAME.json" "security reports for ${{ matrix.source_file }}"
 
@@ -435,6 +435,7 @@ jobs:
       - name: Simulate Base IR on ${{ matrix.platform }}
         run: |
           mkdir -p results/simulation/base/${{ matrix.platform }}
+          mkdir -p results/simulation/base
           BASE_NAME=$(echo "${{ matrix.source_file }}" | sed 's/\.py$//')
           if [ -f "ir/openqasm/base/$BASE_NAME.qasm" ]; then
             quantum-cli run simulate \
@@ -454,7 +455,8 @@ jobs:
           eval "$GIT_PUSH_FUNCTION"
           
           BASE_NAME=$(echo "${{ matrix.source_file }}" | sed 's/\.py$//')
-          git add results/simulation/base/${{ matrix.platform }}/$BASE_NAME.json
+          # git add results/simulation/base/${{ matrix.platform }}/$BASE_NAME.json
+          git add results/simulation/base/
           git_safe_push "ci: Add base simulation results for $BASE_NAME.qasm on ${{ matrix.platform }}" "base simulation results for ${{ matrix.source_file }}"
 
   simulate-optimized:
@@ -488,6 +490,7 @@ jobs:
       - name: Simulate Optimized IR on ${{ matrix.platform }}
         run: |
           mkdir -p results/simulation/optimized/${{ matrix.platform }}
+          mkdir -p results/simulation/optimized
           BASE_NAME=$(echo "${{ matrix.source_file }}" | sed 's/\.py$//')
           if [ -f "ir/openqasm/optimized/$BASE_NAME.qasm" ]; then
             quantum-cli run simulate \
@@ -507,7 +510,8 @@ jobs:
           eval "$GIT_PUSH_FUNCTION"
           
           BASE_NAME=$(echo "${{ matrix.source_file }}" | sed 's/\.py$//')
-          git add results/simulation/optimized/${{ matrix.platform }}/$BASE_NAME.json
+          # git add results/simulation/optimized/${{ matrix.platform }}/$BASE_NAME.json
+          git add results/simulation/optimized/
           git_safe_push "ci: Add optimized simulation results for $BASE_NAME.qasm on ${{ matrix.platform }}" "optimized simulation results for ${{ matrix.source_file }}"
 
   simulate-mitigated:
@@ -541,6 +545,7 @@ jobs:
       - name: Simulate Mitigated IR on ${{ matrix.platform }}
         run: |
           mkdir -p results/simulation/mitigated/${{ matrix.platform }}
+          mkdir -p results/simulation/mitigated
           BASE_NAME=$(echo "${{ matrix.source_file }}" | sed 's/\.py$//')
           if [ -f "ir/openqasm/mitigated/$BASE_NAME.qasm" ]; then
             quantum-cli run simulate \
@@ -560,7 +565,8 @@ jobs:
           eval "$GIT_PUSH_FUNCTION"
           
           BASE_NAME=$(echo "${{ matrix.source_file }}" | sed 's/\.py$//')
-          git add results/simulation/mitigated/${{ matrix.platform }}/$BASE_NAME.json
+          # git add results/simulation/mitigated/${{ matrix.platform }}/$BASE_NAME.json
+          git add results/simulation/mitigated/
           git_safe_push "ci: Add mitigated simulation results for $BASE_NAME.qasm on ${{ matrix.platform }}" "mitigated simulation results for ${{ matrix.source_file }}"
 
   # --------------------------------------------------------------------------
@@ -603,7 +609,7 @@ jobs:
           if [ -f "ir/openqasm/mitigated/$BASE_NAME.qasm" ]; then
             quantum-cli test generate \
               --input-file ir/openqasm/mitigated/$BASE_NAME.qasm \
-              --output-dir tests/generated
+              # --output-dir tests/generated
             echo "Generated unit tests for $BASE_NAME.qasm"
           else
             echo "Skipping test generation, mitigated IR file not found: ir/openqasm/mitigated/$BASE_NAME.qasm"
@@ -617,8 +623,9 @@ jobs:
           
           # Only add if the file was actually generated
           BASE_NAME=$(echo "${{ matrix.source_file }}" | sed 's/\.py$//')
-          if [ -f "tests/generated/$BASE_NAME_test.py" ]; then
-            git add tests/generated/$BASE_NAME_test.py
+          if [ -f "tests/generated/${BASE_NAME}_test.py" ]; then
+            # git add tests/generated/${BASE_NAME}_test.py
+            git add tests/generated/
             git_safe_push "ci: Add generated unit tests for $BASE_NAME.qasm" "generated tests for ${{ matrix.source_file }}"
           else
             echo "No generated test file to commit for $BASE_NAME.qasm"
@@ -656,8 +663,8 @@ jobs:
           # Standardized path for results
           mkdir -p results/tests/unit
           BASE_NAME=$(echo "${{ matrix.source_file }}" | sed 's/\.py$//')
-          TEST_FILE="tests/generated/$BASE_NAME_test.py"
-          RESULT_FILE="results/tests/unit/$BASE_NAME_test_results.json"
+          TEST_FILE="tests/generated/${BASE_NAME}_test.py"
+          RESULT_FILE="results/tests/unit/${BASE_NAME}_test_results.json"
 
           if [ -f "$TEST_FILE" ]; then
             # Use our newly implemented test run command
@@ -676,7 +683,8 @@ jobs:
           eval "$GIT_PUSH_FUNCTION"
           
           BASE_NAME=$(echo "${{ matrix.source_file }}" | sed 's/\.py$//')
-          git add results/tests/unit/$BASE_NAME_test_results.json
+          # git add results/tests/unit/${BASE_NAME}_test_results.json
+          git add results/tests/unit/
           git_safe_push "ci: Add unit test results for $TEST_FILE" "unit test results for ${{ matrix.source_file }}"
 
   # --------------------------------------------------------------------------
@@ -717,7 +725,7 @@ jobs:
           if [ -f "ir/openqasm/mitigated/$BASE_NAME.qasm" ]; then
             quantum-cli analyze resources \
               ir/openqasm/mitigated/$BASE_NAME.qasm \
-              --output results/analysis/resources/$BASE_NAME_resources.json \
+              # --output results/analysis/resources/${BASE_NAME}_resources.json \
               --format json
             echo "Estimated resources for mitigated IR: $BASE_NAME.qasm"
           else
@@ -731,8 +739,9 @@ jobs:
           eval "$GIT_PUSH_FUNCTION"
           
           BASE_NAME=$(echo "${{ matrix.source_file }}" | sed 's/\.py$//')
-          git add results/analysis/resources/$BASE_NAME_resources.json
-          git_safe_push "ci: Add resource estimation result $BASE_NAME_resources.json" "resource estimation for ${{ matrix.source_file }}"
+          # git add results/analysis/resources/${BASE_NAME}_resources.json
+          git add results/analysis/resources/
+          git_safe_push "ci: Add resource estimation result ${BASE_NAME}_resources.json" "resource estimation for ${{ matrix.source_file }}"
 
   cost-estimation:
     # Depends on resource estimation
@@ -770,8 +779,8 @@ jobs:
           if [ -f "ir/openqasm/mitigated/$BASE_NAME.qasm" ]; then
             quantum-cli analyze cost \
               ir/openqasm/mitigated/$BASE_NAME.qasm \
-              --resource-file results/analysis/resources/$BASE_NAME_resources.json \
-              --output results/analysis/cost/$BASE_NAME_cost.json \
+              --resource-file results/analysis/resources/${BASE_NAME}_resources.json \
+              # --output results/analysis/cost/${BASE_NAME}_cost.json \
               --format json
             echo "Estimated cost for mitigated IR: $BASE_NAME.qasm"
           else
@@ -785,8 +794,9 @@ jobs:
           eval "$GIT_PUSH_FUNCTION"
           
           BASE_NAME=$(echo "${{ matrix.source_file }}" | sed 's/\.py$//')
-          git add results/analysis/cost/$BASE_NAME_cost.json
-          git_safe_push "ci: Add cost estimation $BASE_NAME_cost.json" "cost estimation for ${{ matrix.source_file }}"
+          # git add results/analysis/cost/${BASE_NAME}_cost.json
+          git add results/analysis/cost/
+          git_safe_push "ci: Add cost estimation ${BASE_NAME}_cost.json" "cost estimation for ${{ matrix.source_file }}"
 
   benchmark:
     # Analyze the mitigated IR after tests pass (or are skipped)
@@ -823,7 +833,7 @@ jobs:
           if [ -f "ir/openqasm/mitigated/$BASE_NAME.qasm" ]; then
             quantum-cli analyze benchmark \
               ir/openqasm/mitigated/$BASE_NAME.qasm \
-              --output results/analysis/benchmark/$BASE_NAME_benchmark.json
+              # --output results/analysis/benchmark/${BASE_NAME}_benchmark.json
             echo "Benchmarked mitigated circuit for $BASE_NAME.qasm"
           else
             echo "Skipping benchmark, mitigated IR not found: ir/openqasm/mitigated/$BASE_NAME.qasm"
@@ -836,7 +846,7 @@ jobs:
           eval "$GIT_PUSH_FUNCTION"
           
           BASE_NAME=$(echo "${{ matrix.source_file }}" | sed 's/\.py$//')
-          git add results/analysis/benchmark/$BASE_NAME_benchmark.json
+          # git add results/analysis/benchmark/${BASE_NAME}_benchmark.json
           git add results/analysis/benchmark/
           git_safe_push "ci: Add benchmark results for $BASE_NAME.qasm" "benchmark results for ${{ matrix.source_file }}"
 
@@ -871,17 +881,17 @@ jobs:
       - name: Fine-tune Mitigated Circuit
         run: |
           # Standardized path
-          mkdir -p results/analysis/finetuning
+          mkdir -p results/finetune
           # Assumes fine-tuning takes mitigated IR and potentially analysis results
           if [ -f "ir/openqasm/mitigated/$BASE_NAME.qasm" ]; then
             quantum-cli ir finetune \
               --input-file ir/openqasm/mitigated/$BASE_NAME.qasm \
-              --output-file results/analysis/finetuning/$BASE_NAME\_finetune_results.json \
+              # --output-file results/analysis/finetuning/$BASE_NAME\_finetune_results.json \
               --hardware ibm
             echo "Fine-tuned mitigated circuit for ${{ matrix.source_file }}"
           else
             echo "Skipping fine-tuning, mitigated IR not found: ir/openqasm/mitigated/$BASE_NAME.qasm"
-            mkdir -p results/analysis/finetuning && echo '{"status": "skipped", "reason": "Input IR file not found"}' > results/analysis/finetuning/$BASE_NAME.json
+            mkdir -p results/finetune && echo '{"status": "skipped", "reason": "Input IR file not found"}' > results/finetune/$BASE_NAME.json
           fi
 
       - name: Commit fine-tuning results
@@ -890,8 +900,8 @@ jobs:
           eval "$GIT_PUSH_FUNCTION"
           
           BASE_NAME=$(echo "${{ matrix.source_file }}" | sed 's/\.py$//')
-          git add results/analysis/finetuning/$BASE_NAME\_finetune_results.json
-          # Potentially add finetuned IR file here if applicable
+          # git add results/analysis/finetuning/${BASE_NAME}_finetune_results.json
+          git add results/finetune/
           git_safe_push "ci: Add fine-tuning results for ${{ matrix.source_file }}" "fine-tuning results for ${{ matrix.source_file }}"
 
  
