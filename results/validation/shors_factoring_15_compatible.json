@@ -1,0 +1,43 @@
+{
+  "valid": true,
+  "errors": [],
+  "warnings": [
+    "Using undeclared gate: cz",
+    "Using undeclared gate: cz",
+    "Using undeclared gate: cz",
+    "Using undeclared gate: cz",
+    "Using undeclared gate: cz",
+    "Using undeclared gate: cz",
+    "Invalid measure statement format",
+    "Invalid measure statement format",
+    "Invalid measure statement format",
+    "Invalid measure statement format",
+    "No measurement operations found"
+  ],
+  "details": {
+    "version": "2.0",
+    "includes": [
+      "qelib1.inc"
+    ],
+    "registers": {
+      "quantum": [
+        {
+          "name": "period",
+          "size": 4
+        },
+        {
+          "name": "target",
+          "size": 4
+        }
+      ],
+      "classical": [
+        {
+          "name": "reg_measure",
+          "size": 4
+        }
+      ]
+    },
+    "gates": [],
+    "measurements": []
+  }
+}
