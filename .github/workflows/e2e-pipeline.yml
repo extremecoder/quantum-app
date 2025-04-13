@@ -13,7 +13,7 @@ on:
   workflow_dispatch:
     inputs:
       source_file:
-        description: 'Source file to process (relative to source/circuits/)'
+        description: 'Optional: Specific file to process (relative to source/circuits/). If empty, all files will be processed automatically.'
         required: false
         default: ''
       simulator:
@@ -62,15 +62,23 @@ jobs:
       - name: Find source files to process
         id: find-files
         run: |
+          # Create directory if it doesn't exist
+          mkdir -p source/circuits
+          
           # Use input if provided, otherwise find all .py files in source/circuits
           if [ -n "${{ github.event.inputs.source_file }}" ]; then
             # Ensure input is a list for consistency, even if single file
             echo "files=[\"${{ github.event.inputs.source_file }}\"]" >> $GITHUB_OUTPUT
+            echo "Processing single file: ${{ github.event.inputs.source_file }}"
           else
             # Find all Python files, remove prefix, create JSON array
             FILES=$(find source/circuits -name "*.py" | sed 's|^source/circuits/||' | jq -R -s -c 'split("\n") | map(select(length > 0))')
             echo "files=$FILES" >> $GITHUB_OUTPUT
+            echo "Auto-detecting all Python files in source/circuits/"
           fi
+          
+          # Report the files found
+          echo "Files to be processed: $(echo $FILES | jq -r '.[]' 2>/dev/null || echo 'None found')"
 
       - name: Configure Git for commits
         run: |
