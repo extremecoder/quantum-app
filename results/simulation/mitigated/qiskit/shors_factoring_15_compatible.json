@@ -2,14 +2,14 @@
   "platform": "qiskit",
   "shots": 1024,
   "counts": {
-    "0011": 224,
-    "0001": 268,
-    "0010": 269,
-    "0000": 263
+    "0010": 255,
+    "0000": 226,
+    "0011": 280,
+    "0001": 263
   },
   "metadata": {
     "status": "COMPLETED",
-    "total_cli_execution_time_sec": 0.7493786811828613,
+    "total_cli_execution_time_sec": 0.49984192848205566,
     "source_file": "ir/openqasm/mitigated/shors_factoring_15_compatible.qasm"
   }
 }
