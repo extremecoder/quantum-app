@@ -215,7 +215,7 @@ jobs:
             quantum-cli ir validate \
               "$OPENQASM_FILE" \
               --output-file results/validation/$BASE_NAME.json
-            echo "Validated Base OpenQASM for ${{ matrix.source_file }} from openqasm directory"
+            echo "Validated Base OpenQASM for $OPENQASM_FILE from openqasm directory"
           else
             echo "Skipping validation, IR file not found: $OPENQASM_FILE"
             mkdir -p results/validation && echo '{"status": "skipped", "reason": "Input IR file not found"}' > results/validation/$BASE_NAME.json
@@ -228,7 +228,7 @@ jobs:
           
           BASE_NAME=$(echo "${{ matrix.source_file }}" | sed 's/\.py$//')
           git add results/validation/$BASE_NAME.json
-          git_safe_push "ci: Add validation results for ${{ matrix.source_file }}" "validation results for ${{ matrix.source_file }}"
+          git_safe_push "ci: Add validation results for $BASE_NAME.json" "validation results for ${{ matrix.source_file }}"
 
   security-scan:
     needs: [validate, setup]
@@ -264,17 +264,7 @@ jobs:
           # First check the default output location
           BASE_NAME=$(echo "${{ matrix.source_file }}" | sed 's/\.py$//')
           BASE_FILE="ir/openqasm/base/$BASE_NAME.qasm"
-          if [ -f "$BASE_FILE" ]; then
-            quantum-cli security scan \
-              "$BASE_FILE" \
-              --output results/security/$BASE_NAME\_base.json
-            echo "Security scan completed for ${{ matrix.source_file }} from default location"
-          else
-            echo "Default IR file not found: $BASE_FILE"
-            mkdir -p results/security && echo '{"status": "skipped", "reason": "Default IR file not found"}' > results/security/$BASE_NAME\_base.json
-          fi
           
-          # Also check the openqasm directory for backward compatibility
           OPENQASM_FILE="ir/openqasm/base/$BASE_NAME.qasm"
           if [ -f "$OPENQASM_FILE" ]; then
             quantum-cli security scan \
@@ -295,7 +285,7 @@ jobs:
           BASE_NAME=$(echo "${{ matrix.source_file }}" | sed 's/\.py$//')
           git add results/security/$BASE_NAME\_base.json
           git add results/security/$BASE_NAME.json
-          git_safe_push "ci: Add security report for ${{ matrix.source_file }}" "security reports for ${{ matrix.source_file }}"
+          git_safe_push "ci: Add security report for $BASE_NAME.json" "security reports for ${{ matrix.source_file }}"
 
   # --------------------------------------------------------------------------
   # Optimization & Mitigation
@@ -342,7 +332,7 @@ jobs:
               --output-file "ir/openqasm/optimized/$BASE_NAME.qasm" \
               --level 2 \
               --format json
-            echo "Optimized Base IR for ${{ matrix.source_file }} from openqasm directory"
+            echo "Optimized Base IR for $OPENQASM_FILE from openqasm directory"
           else
             echo "OpenQASM IR file not found for optimization: $OPENQASM_FILE"
           fi
@@ -355,7 +345,7 @@ jobs:
           BASE_NAME=$(echo "${{ matrix.source_file }}" | sed 's/\.py$//')
           # Only attempt to add if files exist (avoids git errors)
           [ -f "ir/openqasm/optimized/$BASE_NAME.qasm" ] && git add "ir/openqasm/optimized/$BASE_NAME.qasm"
-          git_safe_push "ci: Add optimized IR for ${{ matrix.source_file }}" "optimized IR for ${{ matrix.source_file }}"
+          git_safe_push "ci: Add optimized IR for $BASE_NAME.qasm" "optimized IR for ${{ matrix.source_file }}"
 
   mitigate:
     # Run after optimization
@@ -394,7 +384,7 @@ jobs:
               --input-file ir/openqasm/optimized/$BASE_NAME.qasm \
               --output-file ir/openqasm/mitigated/$BASE_NAME.qasm \
               --technique zne
-            echo "Applied error mitigation to optimized IR for ${{ matrix.source_file }}"
+            echo "Applied error mitigation to optimized IR for $BASE_NAME.qasm"
           else
             echo "Skipping mitigation, optimized IR file not found: ir/openqasm/optimized/$BASE_NAME.qasm"
             # Copy optimized as placeholder
@@ -409,7 +399,7 @@ jobs:
           
           BASE_NAME=$(echo "${{ matrix.source_file }}" | sed 's/\.py$//')
           git add ir/openqasm/mitigated/$BASE_NAME.qasm
-          git_safe_push "ci: Add error-mitigated OpenQASM for ${{ matrix.source_file }}" "mitigated IR for ${{ matrix.source_file }}"
+          git_safe_push "ci: Add error-mitigated OpenQASM for $BASE_NAME.qasm" "mitigated IR for ${{ matrix.source_file }}"
 
   # --------------------------------------------------------------------------
   # Simulation (Base, Optimized, Mitigated) - Run in parallel
@@ -452,7 +442,7 @@ jobs:
               --backend ${{ matrix.platform }} \
               --shots ${{ needs.setup.outputs.shots }} \
               --output results/simulation/base/${{ matrix.platform }}/$BASE_NAME.json
-            echo "Simulated base IR for ${{ matrix.source_file }} on ${{ matrix.platform }}"
+            echo "Simulated base IR for $BASE_NAME.qasm on ${{ matrix.platform }}"
           else
             echo "Skipping base simulation, IR file not found: ir/openqasm/base/$BASE_NAME.qasm"
             mkdir -p results/simulation/base/${{ matrix.platform }} && echo '{"status": "skipped", "reason": "Input IR file not found"}' > results/simulation/base/${{ matrix.platform }}/$BASE_NAME.json
@@ -465,7 +455,7 @@ jobs:
           
           BASE_NAME=$(echo "${{ matrix.source_file }}" | sed 's/\.py$//')
           git add results/simulation/base/${{ matrix.platform }}/$BASE_NAME.json
-          git_safe_push "ci: Add base simulation results for ${{ matrix.source_file }} on ${{ matrix.platform }}" "base simulation results for ${{ matrix.source_file }}"
+          git_safe_push "ci: Add base simulation results for $BASE_NAME.qasm on ${{ matrix.platform }}" "base simulation results for ${{ matrix.source_file }}"
 
   simulate-optimized:
     # Depends on optimization completing
@@ -505,7 +495,7 @@ jobs:
               --backend ${{ matrix.platform }} \
               --shots ${{ needs.setup.outputs.shots }} \
               --output results/simulation/optimized/${{ matrix.platform }}/$BASE_NAME.json
-            echo "Simulated optimized IR for ${{ matrix.source_file }} on ${{ matrix.platform }}"
+            echo "Simulated optimized IR for $BASE_NAME.qasm on ${{ matrix.platform }}"
           else
              echo "Skipping optimized simulation, IR file not found: ir/openqasm/optimized/$BASE_NAME.qasm"
              mkdir -p results/simulation/optimized/${{ matrix.platform }} && echo '{"status": "skipped", "reason": "Input IR file not found"}' > results/simulation/optimized/${{ matrix.platform }}/$BASE_NAME.json
@@ -518,7 +508,7 @@ jobs:
           
           BASE_NAME=$(echo "${{ matrix.source_file }}" | sed 's/\.py$//')
           git add results/simulation/optimized/${{ matrix.platform }}/$BASE_NAME.json
-          git_safe_push "ci: Add optimized simulation results for ${{ matrix.source_file }} on ${{ matrix.platform }}" "optimized simulation results for ${{ matrix.source_file }}"
+          git_safe_push "ci: Add optimized simulation results for $BASE_NAME.qasm on ${{ matrix.platform }}" "optimized simulation results for ${{ matrix.source_file }}"
 
   simulate-mitigated:
     # Depends on mitigation completing
@@ -558,7 +548,7 @@ jobs:
               --backend ${{ matrix.platform }} \
               --shots ${{ needs.setup.outputs.shots }} \
               --output results/simulation/mitigated/${{ matrix.platform }}/$BASE_NAME.json
-            echo "Simulated mitigated IR for ${{ matrix.source_file }} on ${{ matrix.platform }}"
+            echo "Simulated mitigated IR for $BASE_NAME.qasm on ${{ matrix.platform }}"
           else
             echo "Skipping mitigated simulation, IR file not found: ir/openqasm/mitigated/$BASE_NAME.qasm"
             mkdir -p results/simulation/mitigated/${{ matrix.platform }} && echo '{"status": "skipped", "reason": "Input IR file not found"}' > results/simulation/mitigated/${{ matrix.platform }}/$BASE_NAME.json
@@ -571,7 +561,7 @@ jobs:
           
           BASE_NAME=$(echo "${{ matrix.source_file }}" | sed 's/\.py$//')
           git add results/simulation/mitigated/${{ matrix.platform }}/$BASE_NAME.json
-          git_safe_push "ci: Add mitigated simulation results for ${{ matrix.source_file }} on ${{ matrix.platform }}" "mitigated simulation results for ${{ matrix.source_file }}"
+          git_safe_push "ci: Add mitigated simulation results for $BASE_NAME.qasm on ${{ matrix.platform }}" "mitigated simulation results for ${{ matrix.source_file }}"
 
   # --------------------------------------------------------------------------
   # Testing (Generated Unit Tests)
@@ -612,7 +602,7 @@ jobs:
             quantum-cli test generate \
               --input-file ir/openqasm/mitigated/$BASE_NAME.qasm \
               --output-dir tests/generated
-            echo "Generated unit tests for ${{ matrix.source_file }}"
+            echo "Generated unit tests for $BASE_NAME.qasm"
           else
             echo "Skipping test generation, mitigated IR file not found: ir/openqasm/mitigated/$BASE_NAME.qasm"
             # Create empty placeholder? No, if IR missing, can't generate tests. Log and continue.
@@ -627,9 +617,9 @@ jobs:
           BASE_NAME=$(echo "${{ matrix.source_file }}" | sed 's/\.py$//')
           if [ -f "tests/generated/${BASE_NAME}_test.py" ]; then
             git add tests/generated/${BASE_NAME}_test.py
-            git_safe_push "ci: Add generated unit tests for ${{ matrix.source_file }}" "generated tests for ${{ matrix.source_file }}"
+            git_safe_push "ci: Add generated unit tests for $BASE_NAME.qasm" "generated tests for ${{ matrix.source_file }}"
           else
-            echo "No generated test file to commit for ${{ matrix.source_file }}"
+            echo "No generated test file to commit for $BASE_NAME.qasm"
           fi
 
   run-tests:
@@ -672,7 +662,7 @@ jobs:
             quantum-cli test run \
               "$TEST_FILE" \
               --output "$RESULT_FILE"
-            echo "Ran unit tests for ${{ matrix.source_file }}"
+            echo "Ran unit tests $TEST_FILE"
           else
             echo "Skipping unit tests, test file not found: $TEST_FILE"
             echo '{"status": "skipped", "reason": "Test file not found"}' > "$RESULT_FILE"
@@ -685,7 +675,7 @@ jobs:
           
           BASE_NAME=$(echo "${{ matrix.source_file }}" | sed 's/\.py$//')
           git add results/tests/unit/${BASE_NAME}_test_results.json
-          git_safe_push "ci: Add unit test results for ${{ matrix.source_file }}" "unit test results for ${{ matrix.source_file }}"
+          git_safe_push "ci: Add unit test results for $TEST_FILE" "unit test results for ${{ matrix.source_file }}"
 
   # --------------------------------------------------------------------------
   # Analysis (Resources, Cost, Benchmark, Finetuning) - Based on Mitigated IR
@@ -727,7 +717,7 @@ jobs:
               ir/openqasm/mitigated/$BASE_NAME.qasm \
               --output results/analysis/resources/${BASE_NAME}_resources.json \
               --format json
-            echo "Estimated resources for mitigated IR: ${{ matrix.source_file }}"
+            echo "Estimated resources for mitigated IR: $BASE_NAME.qasm"
           else
              echo "Skipping resource estimation, mitigated IR not found: ir/openqasm/mitigated/$BASE_NAME.qasm"
              mkdir -p results/analysis/resources && echo '{"status": "skipped", "reason": "Input IR file not found"}' > results/analysis/resources/$BASE_NAME.json
@@ -740,7 +730,7 @@ jobs:
           
           BASE_NAME=$(echo "${{ matrix.source_file }}" | sed 's/\.py$//')
           git add results/analysis/resources/${BASE_NAME}_resources.json
-          git_safe_push "ci: Add resource estimation for ${{ matrix.source_file }}" "resource estimation for ${{ matrix.source_file }}"
+          git_safe_push "ci: Add resource estimation result ${BASE_NAME}_resources.json" "resource estimation for ${{ matrix.source_file }}"
 
   cost-estimation:
     # Depends on resource estimation
@@ -777,10 +767,10 @@ jobs:
           if [ -f "ir/openqasm/mitigated/$BASE_NAME.qasm" ]; then
             quantum-cli analyze cost \
               ir/openqasm/mitigated/$BASE_NAME.qasm \
-              --resource-file results/analysis/resources/$BASE_NAME\_resources.json \
+              --resource-file results/analysis/resources/$BASE_NAME_resources.json \
               --output results/analysis/cost/$BASE_NAME\_cost.json \
               --format json
-            echo "Estimated cost for mitigated IR: ${{ matrix.source_file }}"
+            echo "Estimated cost for mitigated IR: $BASE_NAME.qasm"
           else
              echo "Skipping cost estimation, mitigated IR not found: ir/openqasm/mitigated/$BASE_NAME.qasm"
              mkdir -p results/analysis/cost && echo '{"status": "skipped", "reason": "Input IR file not found"}' > results/analysis/cost/$BASE_NAME.json
@@ -792,8 +782,8 @@ jobs:
           eval "$GIT_PUSH_FUNCTION"
           
           BASE_NAME=$(echo "${{ matrix.source_file }}" | sed 's/\.py$//')
-          git add results/analysis/cost/$BASE_NAME\_cost.json
-          git_safe_push "ci: Add cost estimation for ${{ matrix.source_file }}" "cost estimation for ${{ matrix.source_file }}"
+          git add results/analysis/cost/$BASE_NAME_cost.json
+          git_safe_push "ci: Add cost estimation $BASE_NAME_cost.json" "cost estimation for ${{ matrix.source_file }}"
 
   benchmark:
     # Analyze the mitigated IR after tests pass (or are skipped)
