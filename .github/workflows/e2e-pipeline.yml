@@ -147,6 +147,7 @@ jobs:
         with:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
+          ref: ${{ github.ref }}
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
@@ -196,6 +197,10 @@ jobs:
         with:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
+          ref: ${{ github.ref }}
+      - name: Update repository with latest changes
+        run: |
+          git pull origin ${{ github.ref }} --no-rebase
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
@@ -248,6 +253,10 @@ jobs:
         with:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
+          ref: ${{ github.ref }}
+      - name: Update repository with latest changes
+        run: |
+          git pull origin ${{ github.ref }} --no-rebase
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
@@ -310,6 +319,10 @@ jobs:
         with:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
+          ref: ${{ github.ref }}
+      - name: Update repository with latest changes
+        run: |
+          git pull origin ${{ github.ref }} --no-rebase
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
@@ -372,6 +385,10 @@ jobs:
         with:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
+          ref: ${{ github.ref }}
+      - name: Update repository with latest changes
+        run: |
+          git pull origin ${{ github.ref }} --no-rebase
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
@@ -434,6 +451,10 @@ jobs:
         with:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
+          ref: ${{ github.ref }}
+      - name: Update repository with latest changes
+        run: |
+          git pull origin ${{ github.ref }} --no-rebase
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
@@ -489,6 +510,10 @@ jobs:
         with:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
+          ref: ${{ github.ref }}
+      - name: Update repository with latest changes
+        run: |
+          git pull origin ${{ github.ref }} --no-rebase
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
@@ -544,6 +569,10 @@ jobs:
         with:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
+          ref: ${{ github.ref }}
+      - name: Update repository with latest changes
+        run: |
+          git pull origin ${{ github.ref }} --no-rebase
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
@@ -601,6 +630,10 @@ jobs:
         with:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
+          ref: ${{ github.ref }}
+      - name: Update repository with latest changes
+        run: |
+          git pull origin ${{ github.ref }} --no-rebase
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
@@ -662,6 +695,10 @@ jobs:
         with:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
+          ref: ${{ github.ref }}
+      - name: Update repository with latest changes
+        run: |
+          git pull origin ${{ github.ref }} --no-rebase
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
@@ -721,6 +758,10 @@ jobs:
         with:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
+          ref: ${{ github.ref }}
+      - name: Update repository with latest changes
+        run: |
+          git pull origin ${{ github.ref }} --no-rebase
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
@@ -774,6 +815,10 @@ jobs:
         with:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
+          ref: ${{ github.ref }}
+      - name: Update repository with latest changes
+        run: |
+          git pull origin ${{ github.ref }} --no-rebase
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
@@ -829,6 +874,10 @@ jobs:
         with:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
+          ref: ${{ github.ref }}
+      - name: Update repository with latest changes
+        run: |
+          git pull origin ${{ github.ref }} --no-rebase
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
@@ -882,6 +931,10 @@ jobs:
         with:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
+          ref: ${{ github.ref }}
+      - name: Update repository with latest changes
+        run: |
+          git pull origin ${{ github.ref }} --no-rebase
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
@@ -935,7 +988,7 @@ jobs:
   
   generate-microservice:
     # Generate after all IR processing and analysis/finetuning is complete
-    needs: finetune
+    needs: [setup, cost-estimation, benchmark, finetune]
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -947,6 +1000,10 @@ jobs:
         with:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
+          ref: ${{ github.ref }}
+      - name: Update repository with latest changes
+        run: |
+          git pull origin ${{ github.ref }} --no-rebase
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
@@ -1055,7 +1112,7 @@ jobs:
 
   run-microservice-tests:
     # Run tests after they are generated
-    needs: generate-microservice-tests
+    needs: [setup, cost-estimation, benchmark, finetune, generate-microservice]
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -1067,6 +1124,10 @@ jobs:
         with:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
+          ref: ${{ github.ref }}
+      - name: Update repository with latest changes
+        run: |
+          git pull origin ${{ github.ref }} --no-rebase
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
@@ -1130,6 +1191,10 @@ jobs:
         with:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
+          ref: ${{ github.ref }}
+      - name: Update repository with latest changes
+        run: |
+          git pull origin ${{ github.ref }} --no-rebase
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
@@ -1199,6 +1264,10 @@ jobs:
         with:
           fetch-depth: 0 # Fetch history if needed, maybe shallow is fine
           token: ${{ secrets.GITHUB_TOKEN }}
+          ref: ${{ github.ref }}
+      - name: Update repository with latest changes
+        run: |
+          git pull origin ${{ github.ref }} --no-rebase
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
@@ -1241,6 +1310,10 @@ jobs:
         uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
+          ref: ${{ github.ref }}
+      - name: Update repository with latest changes
+        run: |
+          git pull origin ${{ github.ref }} --no-rebase
       - name: Configure Git
         run: |
           git config --local user.name "github-actions[bot]"
