@@ -2,12 +2,12 @@
   "platform": "qiskit",
   "shots": 1024,
   "counts": {
-    "00": 519,
-    "11": 505
+    "11": 525,
+    "00": 499
   },
   "metadata": {
     "status": "COMPLETED",
-    "total_cli_execution_time_sec": 0.4770057201385498,
+    "total_cli_execution_time_sec": 0.5232260227203369,
     "source_file": "ir/openqasm/base/my_circuit.qasm"
   }
 }
