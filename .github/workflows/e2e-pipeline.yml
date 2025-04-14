@@ -179,6 +179,7 @@ jobs:
         run: |
           pip install quantum-cli-sdk
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          pip list
           
       - name: Configure Git
         run: |
@@ -1095,10 +1096,13 @@ jobs:
           if [ -f "ir/openqasm/mitigated/$BASE_NAME.qasm" ]; then
             quantum-cli ir finetune \
               --input-file ir/openqasm/mitigated/$BASE_NAME.qasm \
-              # --output-file results/analysis/finetune/${BASE_NAME}_finetune_results.json \
+              --output-file results/analysis/finetune/${BASE_NAME}_finetune_results.json \
               --hardware ibm \
+              --search random \
+              --shots 1024 \
               --use-hardware \
-              --device-id ibmq_manila
+              --device-id ibmq_manila \
+              --max-circuits 1
             echo "Fine-tuned mitigated circuit for ${{ matrix.source_file }}"
           else
             echo "Skipping fine-tuning, mitigated IR not found: ir/openqasm/mitigated/$BASE_NAME.qasm"
