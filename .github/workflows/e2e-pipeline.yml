@@ -1090,7 +1090,7 @@ jobs:
           # Standardized path
           mkdir -p results/finetune
           
-          
+          BASE_NAME=$(echo "${{ matrix.source_file }}" | sed 's/\.py$//')
           # Assumes fine-tuning takes mitigated IR and potentially analysis results
           if [ -f "ir/openqasm/mitigated/$BASE_NAME.qasm" ]; then
             quantum-cli ir finetune \
