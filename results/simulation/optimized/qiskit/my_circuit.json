@@ -7,7 +7,7 @@
   },
   "metadata": {
     "status": "COMPLETED",
-    "total_cli_execution_time_sec": 0.7034683227539062,
+    "total_cli_execution_time_sec": 0.47386765480041504,
     "source_file": "ir/openqasm/optimized/my_circuit.qasm"
   }
 }
