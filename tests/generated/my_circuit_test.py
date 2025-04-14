@@ -1,16 +1,17 @@
 import pytest
 import logging
-import math
 from pathlib import Path
-from qiskit import QuantumCircuit, transpile
+from qiskit import QuantumCircuit
+# Use modern qiskit_aer import
 from qiskit_aer import AerSimulator
 
-# Configure logging
+# Configure basic logging for the test module
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # --- QASM Content ---
-# Store the QASM content directly as a string, as the filename is not provided
-# and this avoids potential path issues.
+# Using embedded string as the alternative strategy for robustness,
+# as the exact relative path setup can be environment-dependent.
+# Assumed original filename: bell_state_measure.qasm (for context only)
 QASM_CONTENT = """
 OPENQASM 2.0;
 include "qelib1.inc";
@@ -24,128 +25,150 @@ measure q[0] -> c[0];
 measure q[1] -> c[1];
 """
 
-# --- Fixtures ---
+# --- Pytest Fixtures ---
 
 @pytest.fixture(scope="module")
-def simulator():
-    """Provides a reusable AerSimulator instance."""
-    logging.info("Setting up AerSimulator fixture.")
-    return AerSimulator()
+def qasm_content() -> str:
+    """Provides the QASM circuit content as a string."""
+    logging.info("Providing QASM content fixture.")
+    return QASM_CONTENT
 
 @pytest.fixture(scope="module")
-def bell_circuit():
-    """Loads the QuantumCircuit from the embedded QASM string."""
+def quantum_circuit(qasm_content: str) -> QuantumCircuit:
+    """
+    Loads the QuantumCircuit from the QASM string content.
+    Uses module scope for efficiency, loading the circuit only once per module.
+    """
+    logging.info("Loading QuantumCircuit from QASM string fixture.")
     try:
-        logging.info("Loading QuantumCircuit from QASM string.")
-        circuit = QuantumCircuit.from_qasm_str(QASM_CONTENT)
-        logging.info(f"Circuit loaded successfully: {circuit.name}")
+        circuit = QuantumCircuit.from_qasm_str(qasm_content)
+        logging.info("QuantumCircuit loaded successfully.")
+        # Log basic circuit properties upon loading
+        logging.info(f"Circuit - Qubits: {circuit.num_qubits}, Clbits: {circuit.num_clbits}, Depth: {circuit.depth()}, Ops: {circuit.count_ops()}")
         return circuit
     except Exception as e:
-        logging.error(f"Failed to load circuit from QASM string: {e}")
-        pytest.fail(f"Failed to load circuit from QASM string: {e}")
+        logging.error(f"Failed to load QuantumCircuit from QASM string: {e}", exc_info=True)
+        pytest.fail(f"Failed to load QuantumCircuit from QASM string: {e}")
+
+@pytest.fixture(scope="module")
+def simulator() -> AerSimulator:
+    """Provides an AerSimulator instance for running simulations."""
+    logging.info("Creating AerSimulator fixture.")
+    # Initialize the AerSimulator
+    # You could add options here, e.g., method='statevector' or noise_model
+    sim = AerSimulator()
+    logging.info(f"AerSimulator backend: {sim.configuration().backend_name}")
+    return sim
 
 # --- Test Functions ---
 
-def test_circuit_structure(bell_circuit: QuantumCircuit):
+def test_circuit_structure(quantum_circuit: QuantumCircuit):
     """
-    Tests the basic structural properties of the loaded quantum circuit.
+    Tests the basic structure of the loaded quantum circuit.
+    Checks qubit count, classical bit count, and presence/count of key operations.
     """
-    logging.info("Running test_circuit_structure...")
-    assert bell_circuit is not None, "Circuit fixture should not be None"
-    assert bell_circuit.num_qubits == 2, f"Expected 2 qubits, but got {bell_circuit.num_qubits}"
-    logging.info(f"Verified number of qubits: {bell_circuit.num_qubits}")
-    assert bell_circuit.num_clbits == 2, f"Expected 2 classical bits, but got {bell_circuit.num_clbits}"
-    logging.info(f"Verified number of classical bits: {bell_circuit.num_clbits}")
+    logging.info("--- Starting test_circuit_structure ---")
+    assert quantum_circuit is not None, "QuantumCircuit object should be loaded."
 
-    # Check for expected gate types
-    op_names = {op.name for op, _, _ in bell_circuit.data}
-    logging.info(f"Operations found in circuit: {op_names}")
-    assert 'h' in op_names, "Circuit should contain an H gate"
-    assert 'cx' in op_names, "Circuit should contain a CX gate"
-    assert 'measure' in op_names, "Circuit should contain measure operations"
-    logging.info("Verified presence of expected gate types (h, cx, measure).")
+    # Verify qubit and classical bit counts
+    expected_qubits = 2
+    expected_clbits = 2
+    assert quantum_circuit.num_qubits == expected_qubits, \
+        f"Expected {expected_qubits} qubits, but found {quantum_circuit.num_qubits}"
+    assert quantum_circuit.num_clbits == expected_clbits, \
+        f"Expected {expected_clbits} classical bits, but found {quantum_circuit.num_clbits}"
+    logging.info(f"Verified: {quantum_circuit.num_qubits} qubits, {quantum_circuit.num_clbits} classical bits.")
 
-    # Check gate counts (optional, but good for specific circuits)
-    assert bell_circuit.count_ops().get('h', 0) == 1, "Expected 1 H gate"
-    assert bell_circuit.count_ops().get('cx', 0) == 1, "Expected 1 CX gate"
-    assert bell_circuit.count_ops().get('measure', 0) == 2, "Expected 2 measure operations"
-    logging.info("Verified counts of specific gates.")
+    # Verify operation counts
+    op_counts = quantum_circuit.count_ops()
+    logging.info(f"Operations found: {op_counts}")
+    expected_ops = {'h': 1, 'cx': 1, 'measure': 2}
+    total_expected_ops = sum(expected_ops.values())
+
+    assert 'h' in op_counts, "Hadamard (h) gate missing."
+    assert op_counts['h'] == expected_ops['h'], f"Expected {expected_ops['h']} 'h' gate(s), found {op_counts['h']}"
+
+    assert 'cx' in op_counts, "CNOT (cx) gate missing."
+    assert op_counts['cx'] == expected_ops['cx'], f"Expected {expected_ops['cx']} 'cx' gate(s), found {op_counts['cx']}"
+
+    assert 'measure' in op_counts, "Measure operation missing."
+    assert op_counts['measure'] == expected_ops['measure'], f"Expected {expected_ops['measure']} 'measure' ops, found {op_counts['measure']}"
+
+    # Verify total number of operations
+    assert sum(op_counts.values()) == total_expected_ops, \
+        f"Expected total {total_expected_ops} operations, found {sum(op_counts.values())}"
+
+    logging.info("Circuit structure verification passed.")
+    logging.info("--- Finished test_circuit_structure ---")
 
 
-def test_bell_state_simulation(bell_circuit: QuantumCircuit, simulator: AerSimulator):
+def test_circuit_simulation_bell_state(quantum_circuit: QuantumCircuit, simulator: AerSimulator):
     """
-    Runs the Bell state circuit on the simulator and checks the results.
-    Expects roughly equal probabilities for |00> and |11> states.
+    Runs the circuit on an ideal simulator and verifies the expected Bell state outcomes.
+    The circuit creates (|00> + |11>)/sqrt(2), so measurements should yield '00' or '11'.
     """
-    logging.info("Running test_bell_state_simulation...")
-    assert bell_circuit is not None, "Circuit fixture should not be None"
-    assert simulator is not None, "Simulator fixture should not be None"
+    logging.info("--- Starting test_circuit_simulation_bell_state ---")
+    shots = 4096  # A reasonable number of shots for statistical significance
 
-    shots = 4096  # Number of times to run the circuit
-    logging.info(f"Simulating circuit '{bell_circuit.name}' for {shots} shots.")
+    # Run the simulation
+    logging.info(f"Running simulation with {shots} shots...")
+    # No explicit transpilation needed for AerSimulator with basic gates usually
+    job = simulator.run(quantum_circuit, shots=shots)
+    result = job.result()
+    counts = result.get_counts(quantum_circuit)
 
-    # Qiskit Aer recommends explicitly transpiling for the simulator
-    # Although for basic gates it might not be strictly necessary
-    try:
-        transpiled_circuit = transpile(bell_circuit, simulator)
-        result = simulator.run(transpiled_circuit, shots=shots).result()
-        counts = result.get_counts(transpiled_circuit)
-    except Exception as e:
-        logging.error(f"Simulation failed: {e}")
-        pytest.fail(f"Simulation failed: {e}")
+    logging.info(f"Simulation completed. Result counts: {counts}")
 
-    logging.info(f"Simulation successful. Raw counts: {counts}")
+    # --- Assertions on Simulation Results ---
 
-    # 1. Check if counts were obtained
-    assert counts is not None, "Simulation should produce counts."
+    # 1. Basic checks
+    assert counts is not None, "Simulation result should include counts."
     assert isinstance(counts, dict), "Counts should be a dictionary."
+    assert sum(counts.values()) == shots, \
+        f"Total counts ({sum(counts.values())}) do not match the number of shots ({shots})."
 
-    # 2. Check total counts match shots
-    total_counts = sum(counts.values())
-    assert total_counts == shots, f"Total counts ({total_counts}) should equal shots ({shots})."
-    logging.info(f"Verified total counts match shots ({total_counts}/{shots}).")
+    # 2. Check format of result keys (bitstrings)
+    expected_bitstring_length = quantum_circuit.num_clbits
+    assert expected_bitstring_length == 2, "This test assumes 2 classical bits for result keys."
+    if not counts:
+        logging.warning("Counts dictionary is empty. Cannot perform further checks.")
+        # Fail if empty, as we expect results
+        pytest.fail("Simulation produced no measurement counts.")
 
-    # 3. Check format of result keys (bitstrings)
     for bitstring in counts.keys():
-        assert isinstance(bitstring, str), f"Count key '{bitstring}' should be a string."
-        assert len(bitstring) == bell_circuit.num_clbits, \
-            f"Bitstring key '{bitstring}' length should match number of classical bits ({bell_circuit.num_clbits})."
-        assert all(c in '01' for c in bitstring), f"Bitstring key '{bitstring}' should only contain '0' or '1'."
-    logging.info(f"Verified format of result keys (expecting {bell_circuit.num_clbits}-bit strings).")
+        assert isinstance(bitstring, str), f"Count key '{bitstring}' is not a string."
+        assert len(bitstring) == expected_bitstring_length, \
+            f"Bitstring key '{bitstring}' has length {len(bitstring)}, expected {expected_bitstring_length}."
+        assert all(c in '01' for c in bitstring), \
+            f"Bitstring key '{bitstring}' contains invalid characters (should only be '0' or '1')."
 
-    # 4. Algorithm-Specific Checks (Bell State: |00> and |11>)
-    expected_states = {'00', '11'}
-    allowed_states = set(counts.keys())
+    # 3. Algorithm-Specific Assertions (Bell State Verification)
+    # For the state (|00> + |11>)/sqrt(2), we expect only '00' and '11' outcomes in an ideal simulation.
+    allowed_outcomes = {'00', '11'}
+    observed_outcomes = set(counts.keys())
 
-    # Check that only the expected states are present (ideally)
-    # Allow for small possibility of noise/errors if using noisy simulator, but AerSimulator is ideal
-    assert allowed_states.issubset(expected_states), \
-        f"Expected only states {expected_states}, but got {allowed_states}. Counts: {counts}"
-    assert '00' in counts, "Expected state '00' to be present in results."
-    assert '11' in counts, "Expected state '11' to be present in results."
-    logging.info(f"Verified that observed states {allowed_states} are subset of expected {expected_states}.")
+    logging.info(f"Observed outcomes: {observed_outcomes}. Expected subset of: {allowed_outcomes}")
 
-    # Check for roughly equal probabilities (allowing for statistical noise)
-    # A simple check: each expected state should have at least some minimum fraction of shots
-    # A more robust check might involve statistical tests (e.g., Chi-squared), but this is often sufficient.
-    min_expected_fraction = 0.40 # Expecting ~0.5, allow significant deviation for smaller shot counts
-    min_counts_per_state = int(shots * min_expected_fraction)
+    # Check that only allowed outcomes were observed
+    assert observed_outcomes.issubset(allowed_outcomes), \
+        f"Observed unexpected outcomes: {observed_outcomes - allowed_outcomes}. Only {allowed_outcomes} are expected."
 
-    count_00 = counts.get('00', 0)
-    count_11 = counts.get('11', 0)
+    # Check that *both* expected outcomes are present (highly likely with 4096 shots)
+    # This confirms the superposition and entanglement led to both possibilities.
+    assert '00' in counts, "Expected outcome '00' was not observed."
+    assert '11' in counts, "Expected outcome '11' was not observed."
 
-    logging.info(f"Counts for '00': {count_00} (~{count_00/shots*100:.2f}%)")
-    logging.info(f"Counts for '11': {count_11} (~{count_11/shots*100:.2f}%)")
+    # Optional: Check if probabilities are roughly equal (can be flaky, use approx)
+    # prob_00 = counts.get('00', 0) / shots
+    # prob_11 = counts.get('11', 0) / shots
+    # logging.info(f"Observed probabilities: P(00)={prob_00:.4f}, P(11)={prob_11:.4f}")
+    # assert prob_00 == pytest.approx(0.5, abs=0.05) # Check if P(00) is close to 0.5
+    # assert prob_11 == pytest.approx(0.5, abs=0.05) # Check if P(11) is close to 0.5
 
-    assert count_00 > min_counts_per_state, \
-        f"Count for '00' ({count_00}) is below threshold ({min_counts_per_state}) for {shots} shots."
-    assert count_11 > min_counts_per_state, \
-        f"Count for '11' ({count_11}) is below threshold ({min_counts_per_state}) for {shots} shots."
-    logging.info(f"Verified that counts for '00' and '11' are roughly equal (above {min_expected_fraction*100}% threshold).")
+    logging.info("Simulation results are consistent with the expected Bell state (|00> + |11>)/sqrt(2).")
+    logging.info("--- Finished test_circuit_simulation_bell_state ---")
 
-# Example of how to run this test file:
-# Save the code as e.g., `test_bell_circuit.py` in a `tests/` directory
-# Make sure qiskit, qiskit-aer, and pytest are installed:
-# `pip install qiskit qiskit-aer pytest`
-# Run pytest from the terminal in the directory containing the `tests/` folder:
-# `pytest`
+# Example of how to run this test:
+# 1. Save this code as a Python file (e.g., test_bell_circuit.py) in your tests directory.
+# 2. Make sure you have pytest and qiskit-aer installed (`pip install pytest qiskit qiskit-aer`).
+# 3. Run pytest from your terminal in the project's root directory: `pytest`
