@@ -1,0 +1,31 @@
+{
+  "valid": true,
+  "errors": [],
+  "warnings": [
+    "Invalid measure statement format",
+    "Invalid measure statement format",
+    "No measurement operations found"
+  ],
+  "details": {
+    "version": "2.0",
+    "includes": [
+      "qelib1.inc"
+    ],
+    "registers": {
+      "quantum": [
+        {
+          "name": "q",
+          "size": 2
+        }
+      ],
+      "classical": [
+        {
+          "name": "c",
+          "size": 2
+        }
+      ]
+    },
+    "gates": [],
+    "measurements": []
+  }
+}
