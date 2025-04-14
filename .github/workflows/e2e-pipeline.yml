@@ -210,12 +210,12 @@ jobs:
           git_safe_push "ci: Generate base OpenQASM for ${{ matrix.source_file }}" "base IR for ${{ matrix.source_file }}"
 
   validate:
-    needs: [generate-ir, setup]
+    needs: [setup, generate-ir]
     runs-on: ubuntu-latest
     strategy:
       matrix:
         source_file: ${{ fromJson(needs.setup.outputs.source_files) }}
-      fail-fast: false
+      fail-fast: true
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -279,12 +279,12 @@ jobs:
           git_safe_push "ci: Add validation results for $BASE_NAME.json" "validation results for ${{ matrix.source_file }}"
 
   security-scan:
-    needs: [setup, validate]
+    needs: [setup, generate-ir]
     runs-on: ubuntu-latest
     strategy:
       matrix:
         source_file: ${{ fromJson(needs.setup.outputs.source_files) }}
-      fail-fast: false
+      fail-fast: true
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -353,7 +353,7 @@ jobs:
   # --------------------------------------------------------------------------
   optimize:
     # Run after security scan
-    needs: [security-scan, setup]
+    needs: [setup, generate-ir]
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -427,7 +427,7 @@ jobs:
 
   mitigate:
     # Run after optimization
-    needs: [optimize, setup]
+    needs: [setup, optimize]
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -500,7 +500,7 @@ jobs:
   # --------------------------------------------------------------------------
   simulate-base:
     # Depends only on security scan (can run alongside optimize/mitigate)
-    needs: [setup, security-scan]
+    needs: [setup, generate-ir]
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -848,7 +848,7 @@ jobs:
   # --------------------------------------------------------------------------
   resource-estimation:
     # Analyze the mitigated IR after tests pass (or are skipped)
-    needs: [setup, mitigate, run-tests] # Depends on mitigated IR and test execution completion
+    needs: [setup, mitigate] # Depends on mitigated IR and test execution completion
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -980,7 +980,7 @@ jobs:
 
   benchmark:
     # Analyze the mitigated IR after tests pass (or are skipped)
-    needs: [setup, mitigate, run-tests] # Depends on mitigated IR and test execution
+    needs: [setup, mitigate] # Depends on mitigated IR and test execution
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -1045,7 +1045,7 @@ jobs:
   finetune:
     # Update dependencies since service jobs are commented out
     # Depends on completing cost estimation and benchmarking
-    needs: [setup, cost-estimation, benchmark]
+    needs: [setup, mitigate]
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -1125,7 +1125,7 @@ jobs:
   
   generate-microservice:
     # Generate after all IR processing and analysis/finetuning is complete
-    needs: [setup]
+    needs: [setup, mitigate]
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -1201,12 +1201,12 @@ jobs:
 
   run-microservice-tests:
     # Run tests after they are generated
-    needs: [setup, cost-estimation, benchmark, finetune, generate-microservice]
+    needs: [setup, generate-microservice]
     runs-on: ubuntu-latest
     strategy:
       matrix:
         source_file: ${{ fromJson(needs.setup.outputs.source_files) }}
-      fail-fast: false # Allow other service tests to run
+      fail-fast: true # Allow other service tests to run
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
