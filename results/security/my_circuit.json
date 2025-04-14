@@ -1,0 +1,34 @@
+{
+  "findings": [
+    {
+      "name": "measurement_timing",
+      "description": "Measurement without barrier may be vulnerable to timing attacks",
+      "severity": "LOW",
+      "line_number": 4,
+      "matched_text": "creg "
+    },
+    {
+      "name": "measurement_timing",
+      "description": "Measurement without barrier may be vulnerable to timing attacks",
+      "severity": "LOW",
+      "line_number": 7,
+      "matched_text": "measure "
+    },
+    {
+      "name": "measurement_timing",
+      "description": "Measurement without barrier may be vulnerable to timing attacks",
+      "severity": "LOW",
+      "line_number": 8,
+      "matched_text": "measure "
+    },
+    {
+      "name": "no_error_awareness",
+      "description": "No explicit error correction, noise model, or mitigation context detected",
+      "severity": "MEDIUM",
+      "line_number": null,
+      "matched_text": null
+    }
+  ],
+  "risk_score": 31.25,
+  "risk_level": "MEDIUM"
+}
