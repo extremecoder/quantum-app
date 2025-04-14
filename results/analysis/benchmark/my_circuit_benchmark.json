@@ -1,5 +1,5 @@
 {
-  "timestamp": "2025-04-14T08:17:22.919769",
+  "timestamp": "2025-04-14T08:42:08.235177",
   "metrics": {
     "num_results": 1,
     "simulators": [
@@ -10,7 +10,7 @@
     "success_rate": 1.0,
     "error_rate": 0.0,
     "execution_times": [
-      0.424027681350708
+      0.4470396041870117
     ],
     "circuit_depths": [
       3
@@ -31,7 +31,7 @@
         "simulator": "qiskit_aer",
         "shots": 1000,
         "success": true,
-        "execution_time": 0.424027681350708,
+        "execution_time": 0.4470396041870117,
         "circuit_depth": 3,
         "circuit_width": 2,
         "fidelity": 0
@@ -52,7 +52,7 @@
       "qiskit_aer"
     ],
     "total_shots": 1000,
-    "avg_execution_time": 0.424027681350708,
+    "avg_execution_time": 0.4470396041870117,
     "avg_circuit_depth": 3.0,
     "avg_circuit_width": 2.0
   }
