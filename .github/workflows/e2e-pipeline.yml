@@ -1096,7 +1096,7 @@ jobs:
           if [ -f "ir/openqasm/mitigated/$BASE_NAME.qasm" ]; then
             quantum-cli ir finetune \
               --input-file ir/openqasm/mitigated/$BASE_NAME.qasm \
-              --output-file results/analysis/finetune/${BASE_NAME}_finetune_results.json \
+              --output-file results/finetune/${BASE_NAME}_finetune_results.json \
               --hardware ibm \
               --search random \
               --shots 1024 \
@@ -1115,7 +1115,7 @@ jobs:
           eval "$GIT_PUSH_FUNCTION"
           
           BASE_NAME=$(echo "${{ matrix.source_file }}" | sed 's/\.py$//')
-          # git add results/analysis/finetuning/${BASE_NAME}_finetune_results.json
+          # git add results/finetune/${BASE_NAME}_finetune_results.json
           git add results/finetune/
           git_safe_push "ci: Add fine-tuning results for ${{ matrix.source_file }}" "fine-tuning results for ${{ matrix.source_file }}"
 
@@ -1189,7 +1189,8 @@ jobs:
           eval "$GIT_PUSH_FUNCTION"
           
           BASE_NAME=$(echo "${{ matrix.source_file }}" | sed 's/\.py$//')
-          SERVICE_DIR="services/generated/$BASE_NAME"
+          # SERVICE_DIR="services/generated/$BASE_NAME"
+          SERVICE_DIR="microservice"
           if [ -d "$SERVICE_DIR" ]; then
              # Add the whole directory
             git add "$SERVICE_DIR"
