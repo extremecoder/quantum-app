@@ -71,6 +71,7 @@ env:
         fi
       done
     }
+  PYTHON_VERSION: '3.10'
 
 jobs:
   setup:
@@ -80,6 +81,7 @@ jobs:
       # Pass simulator and shots inputs to other jobs
       simulator: ${{ github.event.inputs.simulator || 'qiskit' }}
       shots: ${{ github.event.inputs.shots || '1024' }}
+      python_cache_key: ${{ steps.python-cache.outputs.cache-key }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -91,7 +93,17 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.10'
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Cache Python dependencies
+        id: python-cache
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}-quantum-sdk
+          restore-keys: |
+            ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}-
+            ${{ runner.os }}-pip-
 
       - name: Install dependencies
         run: |
@@ -148,14 +160,26 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
           ref: ${{ github.ref }}
+          
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.10'
+          python-version: ${{ env.PYTHON_VERSION }}
+          
+      - name: Restore Python dependencies cache
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}-quantum-sdk
+          restore-keys: |
+            ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}-
+            ${{ runner.os }}-pip-
+            
       - name: Install dependencies
         run: |
           pip install quantum-cli-sdk
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          
       - name: Configure Git
         run: |
           git config --local user.name "github-actions[bot]"
@@ -198,17 +222,30 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
           ref: ${{ github.ref }}
+          
       - name: Update repository with latest changes
         run: |
           git pull origin ${{ github.ref }} --no-rebase
+          
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.10'
+          python-version: ${{ env.PYTHON_VERSION }}
+          
+      - name: Restore Python dependencies cache
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}-quantum-sdk
+          restore-keys: |
+            ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}-
+            ${{ runner.os }}-pip-
+            
       - name: Install dependencies
         run: |
           pip install quantum-cli-sdk
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          
       - name: Configure Git
         run: |
           git config --local user.name "github-actions[bot]"
@@ -241,7 +278,7 @@ jobs:
           git_safe_push "ci: Add validation results for $BASE_NAME.json" "validation results for ${{ matrix.source_file }}"
 
   security-scan:
-    needs: [validate, setup]
+    needs: [setup, validate]
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -260,7 +297,15 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.10'
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Restore Python dependencies cache
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}-quantum-sdk
+          restore-keys: |
+            ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}-
+            ${{ runner.os }}-pip-
       - name: Install dependencies
         run: |
           pip install quantum-cli-sdk
@@ -326,7 +371,15 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.10'
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Restore Python dependencies cache
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}-quantum-sdk
+          restore-keys: |
+            ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}-
+            ${{ runner.os }}-pip-
       - name: Install dependencies
         run: |
           pip install quantum-cli-sdk
@@ -392,7 +445,15 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.10'
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Restore Python dependencies cache
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}-quantum-sdk
+          restore-keys: |
+            ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}-
+            ${{ runner.os }}-pip-
       - name: Install dependencies
         run: |
           pip install quantum-cli-sdk
@@ -458,7 +519,15 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.10'
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Restore Python dependencies cache
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}-quantum-sdk
+          restore-keys: |
+            ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}-
+            ${{ runner.os }}-pip-
       - name: Install dependencies
         run: |
           pip install quantum-cli-sdk
@@ -517,7 +586,15 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.10'
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Restore Python dependencies cache
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}-quantum-sdk
+          restore-keys: |
+            ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}-
+            ${{ runner.os }}-pip-
       - name: Install dependencies
         run: |
           pip install quantum-cli-sdk
@@ -576,7 +653,15 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.10'
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Restore Python dependencies cache
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}-quantum-sdk
+          restore-keys: |
+            ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}-
+            ${{ runner.os }}-pip-
       - name: Install dependencies
         run: |
           pip install quantum-cli-sdk
@@ -637,7 +722,15 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.10'
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Restore Python dependencies cache
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}-quantum-sdk
+          restore-keys: |
+            ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}-
+            ${{ runner.os }}-pip-
       - name: Install dependencies
         run: |
           pip install quantum-cli-sdk
@@ -702,7 +795,15 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.10'
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Restore Python dependencies cache
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}-quantum-sdk
+          restore-keys: |
+            ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}-
+            ${{ runner.os }}-pip-
       - name: Install dependencies including pytest
         run: |
           pip install quantum-cli-sdk pytest
@@ -751,7 +852,7 @@ jobs:
     strategy:
       matrix:
         source_file: ${{ fromJson(needs.setup.outputs.source_files) }}
-      fail-fast: false
+      fail-fast: true
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -765,7 +866,15 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.10'
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Restore Python dependencies cache
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}-quantum-sdk
+          restore-keys: |
+            ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}-
+            ${{ runner.os }}-pip-
       - name: Install dependencies
         run: |
           pip install quantum-cli-sdk
@@ -822,7 +931,15 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.10'
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Restore Python dependencies cache
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}-quantum-sdk
+          restore-keys: |
+            ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}-
+            ${{ runner.os }}-pip-
       - name: Install dependencies
         run: |
           pip install quantum-cli-sdk
@@ -881,7 +998,15 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.10'
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Restore Python dependencies cache
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}-quantum-sdk
+          restore-keys: |
+            ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}-
+            ${{ runner.os }}-pip-
       - name: Install dependencies
         run: |
           pip install quantum-cli-sdk
@@ -938,7 +1063,15 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.10'
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Restore Python dependencies cache
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}-quantum-sdk
+          restore-keys: |
+            ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}-
+            ${{ runner.os }}-pip-
       - name: Install dependencies
         run: |
           pip install quantum-cli-sdk
@@ -988,7 +1121,7 @@ jobs:
   
   generate-microservice:
     # Generate after all IR processing and analysis/finetuning is complete
-    needs: [setup, cost-estimation, benchmark, finetune]
+    needs: [setup]
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -1007,7 +1140,15 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.10'
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Restore Python dependencies cache
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}-quantum-sdk
+          restore-keys: |
+            ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}-
+            ${{ runner.os }}-pip-
       - name: Install dependencies
         run: |
           pip install quantum-cli-sdk
@@ -1053,63 +1194,6 @@ jobs:
             echo "No microservice directory to commit for $BASE_NAME"
           fi
 
-  # generate-microservice-tests:
-  #   # Generate tests after the microservice source exists
-  #   needs: generate-microservice
-  #   runs-on: ubuntu-latest
-  #   strategy:
-  #     matrix:
-  #       source_file: ${{ fromJson(needs.setup.outputs.source_files) }}
-  #     fail-fast: false
-  #   steps:
-  #     - name: Checkout repository
-  #       uses: actions/checkout@v4
-  #       with:
-  #         fetch-depth: 0
-  #         token: ${{ secrets.GITHUB_TOKEN }}
-  #     - name: Set up Python
-  #       uses: actions/setup-python@v4
-  #       with:
-  #         python-version: '3.10'
-  #     - name: Install dependencies
-  #       run: |
-  #         pip install quantum-cli-sdk
-  #         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-  #     - name: Configure Git
-  #       run: |
-  #         git config --local user.name "github-actions[bot]"
-  #         git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
-  #     - name: Generate Microservice Tests
-  #       run: |
-  #         BASE_NAME=$(echo "${{ matrix.source_file }}" | sed 's/\.py$//')
-  #         SERVICE_DIR="services/generated/$BASE_NAME"
-  #         # Output tests within the service directory structure
-  #         TEST_OUTPUT_DIR="$SERVICE_DIR/tests"
-
-  #         if [ -d "$SERVICE_DIR" ]; then
-  #           quantum-cli service test-generate \
-  #             "$SERVICE_DIR" \
-  #             --output "$TEST_OUTPUT_DIR"
-  #           echo "Generated microservice tests for $BASE_NAME"
-  #         else
-  #           echo "Skipping microservice test generation, service directory not found: $SERVICE_DIR"
-  #         fi
-
-  #     - name: Commit generated microservice tests
-  #       run: |
-  #         # Load the git push function
-  #         eval "$GIT_PUSH_FUNCTION"
-          
-  #         BASE_NAME=$(echo "${{ matrix.source_file }}" | sed 's/\.py$//')
-  #         TEST_OUTPUT_DIR="services/generated/$BASE_NAME/tests"
-  #         if [ -d "$TEST_OUTPUT_DIR" ]; then
-  #           git add "$TEST_OUTPUT_DIR"
-  #           git_safe_push "ci: Add generated microservice tests for $BASE_NAME" "microservice tests for $BASE_NAME"
-  #         else
-  #            echo "No microservice test directory to commit for $BASE_NAME"
-  #         fi
-
   run-microservice-tests:
     # Run tests after they are generated
     needs: [setup, cost-estimation, benchmark, finetune, generate-microservice]
@@ -1131,7 +1215,15 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.10'
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Restore Python dependencies cache
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}-quantum-sdk
+          restore-keys: |
+            ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}-
+            ${{ runner.os }}-pip-
       - name: Set up Docker Buildx (required for service test run)
         uses: docker/setup-buildx-action@v2
       - name: Install dependencies
@@ -1198,7 +1290,15 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.10'
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Restore Python dependencies cache
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}-quantum-sdk
+          restore-keys: |
+            ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}-
+            ${{ runner.os }}-pip-
       - name: Install dependencies
         run: |
           pip install quantum-cli-sdk
@@ -1271,7 +1371,15 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.10'
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Restore Python dependencies cache
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}-quantum-sdk
+          restore-keys: |
+            ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}-
+            ${{ runner.os }}-pip-
       - name: Install dependencies
         run: |
           pip install quantum-cli-sdk
