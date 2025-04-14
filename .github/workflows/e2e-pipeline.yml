@@ -980,7 +980,7 @@ jobs:
 
   benchmark:
     # Analyze the mitigated IR after tests pass (or are skipped)
-    needs: [setup, mitigate] # Depends on mitigated IR and test execution
+    needs: [setup, mitigate, cost-estimation ] # Depends on mitigated IR and test execution
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -1045,7 +1045,7 @@ jobs:
   finetune:
     # Update dependencies since service jobs are commented out
     # Depends on completing cost estimation and benchmarking
-    needs: [setup, mitigate]
+    needs: [setup, mitigate, benchmark ]
     runs-on: ubuntu-latest
     strategy:
       matrix:
