@@ -7,57 +7,57 @@
   "finetuned_results": [
     {
       "success": true,
-      "score": 1.848480345850097,
-      "entropy": 1.1485254147234987,
+      "score": 1.7716290121647924,
+      "entropy": 1.100774996337321,
       "unique_outcomes": 4,
       "probabilities": {
-        "11": 0.48828125,
-        "00": 0.490234375,
-        "10": 0.013671875,
-        "01": 0.0078125
+        "00": 0.5166015625,
+        "11": 0.4697265625,
+        "10": 0.009765625,
+        "01": 0.00390625
       },
       "counts": {
-        "11": 500,
-        "00": 502,
-        "10": 14,
-        "01": 8
+        "00": 529,
+        "11": 481,
+        "10": 10,
+        "01": 4
       },
       "shots": 1024,
       "parameters": {
-        "shots": 1024,
-        "optimization_level": 0,
-        "layout_method": "trivial",
-        "routing_method": "lookahead",
+        "shots": 8192,
+        "optimization_level": 3,
+        "layout_method": "dense",
+        "routing_method": "stochastic",
         "scheduling": "alap",
-        "transpiler_seed": 987
+        "transpiler_seed": 42
       },
       "hardware_metadata": {
         "platform": "ibm",
         "provider": "IBM",
         "device": "ibm_kyiv",
         "device_id": "ibmq_manila",
-        "job_id": "czye9penhqag008trawg",
+        "job_id": "czyg7mekzhn0008d8nzg",
         "optimization_level": 1,
         "error": null,
         "status": "DONE",
-        "execution_time": 31.562273263931274
+        "execution_time": 61.26293325424194
       }
     }
   ],
-  "timestamp": "2025-04-14T10:35:38.265330",
+  "timestamp": "2025-04-14T12:48:16.299178",
   "best_parameters": {
-    "shots": 1024,
-    "optimization_level": 0,
-    "layout_method": "trivial",
-    "routing_method": "lookahead",
+    "shots": 8192,
+    "optimization_level": 3,
+    "layout_method": "dense",
+    "routing_method": "stochastic",
     "scheduling": "alap",
-    "transpiler_seed": 987
+    "transpiler_seed": 42
   },
   "improvement_metrics": {
-    "score_improvement": "0.45%",
-    "entropy_improvement": "0.45%",
-    "original_score": 1.8402130671763994,
-    "finetuned_score": 1.848480345850097
+    "score_improvement": "1.63%",
+    "entropy_improvement": "1.63%",
+    "original_score": 1.743280167149294,
+    "finetuned_score": 1.7716290121647924
   },
   "used_hardware": true
 }
