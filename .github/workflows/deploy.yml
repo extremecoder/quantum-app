@@ -1,0 +1,467 @@
+name: Quantum Application E2E Pipeline
+
+on:
+  # push:
+  #   branches: [ main, master ]
+  #   paths:
+  #     - 'source/circuits/**'
+  #     - '.github/workflows/e2e-pipeline.yml'
+  pull_request:
+    branches: [ main, master ]
+    paths:
+      - 'source/circuits/**'
+  workflow_dispatch:
+    inputs:
+      source_file:
+        description: 'Optional: Specific file to process (relative to source/circuits/). If empty, all files will be processed automatically.'
+        required: false
+        default: ''
+      simulator:
+        description: 'Simulator to use (qiskit, cirq, braket)'
+        required: false
+        # Default to qiskit if not provided via dispatch
+        default: 'qiskit'
+      shots:
+        description: 'Number of shots for simulation'
+        required: false
+        # Default to 1024 if not provided via dispatch
+        default: '1024'
+
+# Grant GITHUB_TOKEN the permissions required to make a Pages deployment
+permissions:
+  contents: write    # Needed for pushing changes
+  pages: write       # Needed if you're publishing results to GitHub Pages
+  id-token: write    # Needed for GitHub OIDC authentication
+
+# Define reusable bash function for all jobs
+env:
+  GIT_PUSH_FUNCTION: |
+    git_safe_push() {
+      local commit_msg="$1"
+      local error_msg="$2"
+      local max_retries=5
+      local retry_count=0
+      local delay=3
+      
+      # Only commit if changes were staged
+      if git diff --staged --quiet; then
+        echo "No changes to commit"
+        return 0
+      fi
+      
+      git commit -m "$commit_msg"
+      
+      while [ $retry_count -lt $max_retries ]; do
+        echo "Attempting to push changes (attempt $(($retry_count + 1))/$max_retries)..."
+        if git push; then
+          echo "Successfully pushed changes!"
+          return 0
+        else
+          retry_count=$(($retry_count + 1))
+          if [ $retry_count -lt $max_retries ]; then
+            echo "Push failed, pulling latest changes and retrying in $delay seconds..."
+            git pull --rebase
+            sleep $delay
+            # Exponential backoff
+            delay=$(($delay * 2))
+          else
+            echo "Failed to push after $max_retries attempts: $error_msg"
+            return 1
+          fi
+        fi
+      done
+    }
+  PYTHON_VERSION: '3.10'
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    outputs:
+      source_files: ${{ steps.find-files.outputs.files }}
+      # Pass simulator and shots inputs to other jobs
+      simulator: ${{ github.event.inputs.simulator || 'qiskit' }}
+      shots: ${{ github.event.inputs.shots || '1024' }}
+      python_cache_key: ${{ steps.python-cache.outputs.cache-key }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          # Fetch all history for accurate diffs
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Cache Python dependencies
+        id: python-cache
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}-quantum-sdk
+          restore-keys: |
+            ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}-
+            ${{ runner.os }}-pip-
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install quantum-cli-sdk
+          # Ensure requirements.txt exists and is used
+          if [ -f requirements.txt ]; then
+            pip install -r requirements.txt
+          else
+            echo "requirements.txt not found, skipping."
+          fi
+
+      - name: Find source files to process
+        id: find-files
+        run: |
+          # Create directory if it doesn't exist
+          mkdir -p source/circuits
+          
+          # Use input if provided, otherwise find all .py files in source/circuits
+          if [ -n "${{ github.event.inputs.source_file }}" ]; then
+            # Ensure input is a list for consistency, even if single file
+            echo "files=[\"${{ github.event.inputs.source_file }}\"]" >> $GITHUB_OUTPUT
+            echo "Processing single file: ${{ github.event.inputs.source_file }}"
+          else
+            # Find all Python files, remove prefix, create JSON array
+            FILES=$(find source/circuits -name "*.py" | sed 's|^source/circuits/||' | jq -R -s -c 'split("\n") | map(select(length > 0))')
+            echo "files=$FILES" >> $GITHUB_OUTPUT
+            echo "Auto-detecting all Python files in source/circuits/"
+          fi
+          
+          # Report the files found
+          echo "Files to be processed: $(echo $FILES | jq -r '.[]' 2>/dev/null || echo 'None found')"
+
+      - name: Configure Git for commits
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+  
+  generate-microservice:
+    # Generate after all IR processing and analysis/finetuning is complete
+    needs: setup
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        source_file: ${{ fromJson(needs.setup.outputs.source_files) }}
+      fail-fast: false
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+          ref: ${{ github.ref }}
+      - name: Update repository with latest changes
+        run: |
+          git pull origin ${{ github.ref }} --no-rebase
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Restore Python dependencies cache
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}-quantum-sdk
+          restore-keys: |
+            ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}-
+            ${{ runner.os }}-pip-
+      - name: Install dependencies
+        run: |
+          pip install quantum-cli-sdk
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+      - name: Configure Git
+        run: |
+          git config --local user.name "github-actions[bot]"
+          git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Generate Microservice from Mitigated IR
+        run: |
+          BASE_NAME=$(echo "${{ matrix.source_file }}" | sed 's/\.py$//')
+          # Standardized path
+          # SERVICE_DIR="services/generated/$BASE_NAME"
+          SERVICE_DIR="microservice"
+          
+          mkdir -p "$SERVICE_DIR"
+
+          if [ -f "ir/openqasm/mitigated/$BASE_NAME.qasm" ]; then
+            # Generate microservice source code
+            quantum-cli service generate \
+              ir/openqasm/mitigated/$BASE_NAME.qasm \
+              --output-dir "$SERVICE_DIR"
+            # Copy the relevant IR into the service directory? Assume generate handles this or package step does.
+            echo "Generated microservice source for $BASE_NAME"
+          else
+            echo "Skipping microservice generation, mitigated IR not found: ir/openqasm/mitigated/$BASE_NAME.qasm"
+            # Create a placeholder file? Or just log? Log is safer.
+          fi
+
+      - name: Commit generated microservice source
+        run: |
+          # Load the git push function
+          eval "$GIT_PUSH_FUNCTION"
+          
+          BASE_NAME=$(echo "${{ matrix.source_file }}" | sed 's/\.py$//')
+          # SERVICE_DIR="services/generated/$BASE_NAME"
+          SERVICE_DIR="microservice"
+          if [ -d "$SERVICE_DIR" ]; then
+             # Add the whole directory
+            git add "$SERVICE_DIR"
+            git_safe_push "ci: Add generated microservice source for $BASE_NAME" "microservice source for $BASE_NAME"
+          else
+            echo "No microservice directory to commit for $BASE_NAME"
+          fi
+
+  run-microservice-tests:
+    # Run tests after they are generated
+    needs: [setup, generate-microservice]
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        source_file: ${{ fromJson(needs.setup.outputs.source_files) }}
+      fail-fast: true # Allow other service tests to run
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+          ref: ${{ github.ref }}
+      - name: Update repository with latest changes
+        run: |
+          git pull origin ${{ github.ref }} --no-rebase
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Restore Python dependencies cache
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}-quantum-sdk
+          restore-keys: |
+            ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}-
+            ${{ runner.os }}-pip-
+      - name: Set up Docker Buildx (required for service test run)
+        uses: docker/setup-buildx-action@v2
+      - name: Install dependencies
+        run: |
+          pip install quantum-cli-sdk
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+      - name: Configure Git
+        run: |
+          git config --local user.name "github-actions[bot]"
+          git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Run Microservice Tests
+        run: |
+          BASE_NAME=$(echo "${{ matrix.source_file }}" | sed 's/\.py$//')
+          # SERVICE_DIR="services/generated/$BASE_NAME"
+          SERVICE_DIR="microservice"
+          TEST_DIR="$SERVICE_DIR/tests"
+          # Standardized results path
+          RESULT_DIR="results/tests/service"
+          RESULT_FILE="$RESULT_DIR/$BASE_NAME.json"
+          mkdir -p "$RESULT_DIR"
+
+          if [ -d "$SERVICE_DIR" ] && [ -d "$TEST_DIR" ]; then
+            # Build and run tests using the CLI command (assumes Docker interaction)
+            quantum-cli service test-run \
+              "$SERVICE_DIR" \
+              --test-dir "$TEST_DIR" \
+              --output "$RESULT_FILE"
+            echo "Ran microservice tests for $BASE_NAME"
+          else
+            echo "Skipping microservice tests, service or test directory not found for $BASE_NAME"
+            echo '{"status": "skipped", "reason": "Service or test directory not found"}' > "$RESULT_FILE"
+          fi
+
+      - name: Commit microservice test results
+        run: |
+          # Load the git push function
+          eval "$GIT_PUSH_FUNCTION"
+          
+          BASE_NAME=$(echo "${{ matrix.source_file }}" | sed 's/\.py$//')
+          RESULT_FILE="results/tests/service/$BASE_NAME.json"
+          git add "$RESULT_FILE"
+          git_safe_push "ci: Add microservice test results for ${{ matrix.source_file }}" "microservice test results for ${{ matrix.source_file }}"
+
+  
+  package:
+    # Depends on service tests running and resource estimation for metadata
+    needs: run-microservice-tests
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        source_file: ${{ fromJson(needs.setup.outputs.source_files) }}
+      fail-fast: false
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+          ref: ${{ github.ref }}
+      - name: Update repository with latest changes
+        run: |
+          git pull origin ${{ github.ref }} --no-rebase
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Restore Python dependencies cache
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}-quantum-sdk
+          restore-keys: |
+            ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}-
+            ${{ runner.os }}-pip-
+      - name: Install dependencies
+        run: |
+          pip install quantum-cli-sdk
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+      - name: Configure Git
+        run: |
+          git config --local user.name "github-actions[bot]"
+          git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Package Application
+        run: |
+          BASE_NAME=$(echo "${{ matrix.source_file }}" | sed 's/\.py$//')
+          SERVICE_DIR="services/generated/$BASE_NAME"
+          CIRCUIT_FILE="ir/openqasm/mitigated/$BASE_NAME.qasm"
+          # Use standardized resource estimation path
+          METADATA_FILE="results/analysis/resources/$BASE_NAME.json"
+          OUTPUT_PATH="dist/$BASE_NAME.zip"
+          mkdir -p dist
+
+          # Check required files exist before packaging
+          if [ -d "$SERVICE_DIR" ] && [ -f "$CIRCUIT_FILE" ] && [ -f "$METADATA_FILE" ]; then
+            quantum-cli package create \
+              --source-dir "$SERVICE_DIR" \
+              --circuit-file "$CIRCUIT_FILE" \
+              --metadata-file "$METADATA_FILE" \
+              --output-path "$OUTPUT_PATH"
+            echo "Packaged application for $BASE_NAME"
+          else
+            echo "Skipping packaging for $BASE_NAME, required files/directories missing."
+            echo "SERVICE_DIR exists: $(test -d $SERVICE_DIR && echo yes || echo no)"
+            echo "CIRCUIT_FILE exists: $(test -f $CIRCUIT_FILE && echo yes || echo no)"
+            echo "METADATA_FILE exists: $(test -f $METADATA_FILE && echo yes || echo no)"
+            # Fail the step? Or just log? Logging for now.
+          fi
+
+      - name: Commit package
+        run: |
+          # Load the git push function
+          eval "$GIT_PUSH_FUNCTION"
+          
+          BASE_NAME=$(echo "${{ matrix.source_file }}" | sed 's/\.py$//')
+          OUTPUT_PATH="dist/$BASE_NAME.zip"
+          if [ -f "$OUTPUT_PATH" ]; then
+            git add "$OUTPUT_PATH"
+            git_safe_push "ci: Add application package for $BASE_NAME" "package for $BASE_NAME"
+          else
+            echo "No package file to commit for $BASE_NAME"
+          fi
+
+  publish:
+    # Depends on the package being created
+    needs: package
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        source_file: ${{ fromJson(needs.setup.outputs.source_files) }}
+      fail-fast: false
+    # Only run on pushes to main/master, not on PRs by default
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    steps:
+      - name: Checkout repository (needed to find package)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Fetch history if needed, maybe shallow is fine
+          token: ${{ secrets.GITHUB_TOKEN }}
+          ref: ${{ github.ref }}
+      - name: Update repository with latest changes
+        run: |
+          git pull origin ${{ github.ref }} --no-rebase
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Restore Python dependencies cache
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}-quantum-sdk
+          restore-keys: |
+            ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}-
+            ${{ runner.os }}-pip-
+      - name: Install dependencies
+        run: |
+          pip install quantum-cli-sdk
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+
+      - name: Publish Application to Quantum Hub
+        env:
+          # Use secrets for credentials
+          QUANTUM_HUB_USERNAME: ${{ secrets.QUANTUM_HUB_USERNAME }}
+          QUANTUM_HUB_TOKEN: ${{ secrets.QUANTUM_HUB_TOKEN }}
+        run: |
+          BASE_NAME=$(echo "${{ matrix.source_file }}" | sed 's/\.py$//')
+          PACKAGE_PATH="dist/$BASE_NAME.zip"
+
+          # Check if credentials and package exist
+          if [ -z "${QUANTUM_HUB_USERNAME}" ] || [ -z "${QUANTUM_HUB_TOKEN}" ]; then
+            echo "Quantum Hub credentials (QUANTUM_HUB_USERNAME, QUANTUM_HUB_TOKEN) not found in secrets. Skipping publish step."
+          elif [ ! -f "$PACKAGE_PATH" ]; then
+            echo "Package file not found at $PACKAGE_PATH. Skipping publish step."
+          else
+            # Publish to Quantum Hub
+            quantum-cli hub publish \
+              "$PACKAGE_PATH" \
+              --username "${QUANTUM_HUB_USERNAME}" \
+              --token "${QUANTUM_HUB_TOKEN}"
+            echo "Published $PACKAGE_PATH to Quantum Hub"
+          fi
+
+  #Optional: Job to delete the enhanced pipeline file if this one is stable
+  cleanup-old-pipeline:
+    needs: [publish] # Run after everything else successfully finishes
+    runs-on: ubuntu-latest
+    if: success() && (github.event_name == 'push' && github.ref == 'refs/heads/main') # Only on successful push to main
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          ref: ${{ github.ref }}
+      - name: Update repository with latest changes
+        run: |
+          git pull origin ${{ github.ref }} --no-rebase
+      - name: Configure Git
+        run: |
+          git config --local user.name "github-actions[bot]"
+          git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
+      - name: Remove old pipeline file
+        run: |
+          # Load the git push function
+          eval "$GIT_PUSH_FUNCTION"
+          
+          OLD_PIPELINE=".github/workflows/e2e-enhanced-pipeline.yml"
+          if [ -f "$OLD_PIPELINE" ]; then
+            git rm "$OLD_PIPELINE"
+            git_safe_push "ci: Remove redundant e2e-enhanced-pipeline.yml workflow" "removing old pipeline file"
+            echo "Removed $OLD_PIPELINE."
+          else
+            echo "$OLD_PIPELINE not found, skipping removal."
+          fi
+
