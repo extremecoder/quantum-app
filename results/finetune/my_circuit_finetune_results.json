@@ -1,0 +1,63 @@
+{
+  "circuit_file": "ir/openqasm/mitigated/my_circuit.qasm",
+  "hardware_target": "ibm",
+  "search_method": "random",
+  "base_shots": 1024,
+  "original_parameters": {},
+  "finetuned_results": [
+    {
+      "success": true,
+      "score": 1.8387003227464913,
+      "entropy": 1.1424487447084284,
+      "unique_outcomes": 4,
+      "probabilities": {
+        "01": 0.0068359375,
+        "00": 0.482421875,
+        "11": 0.4970703125,
+        "10": 0.013671875
+      },
+      "counts": {
+        "01": 7,
+        "00": 494,
+        "11": 509,
+        "10": 14
+      },
+      "shots": 1024,
+      "parameters": {
+        "shots": 4096,
+        "optimization_level": 3,
+        "layout_method": "dense",
+        "routing_method": "basic",
+        "scheduling": "alap",
+        "transpiler_seed": 987
+      },
+      "hardware_metadata": {
+        "platform": "ibm",
+        "provider": "IBM",
+        "device": "ibm_kyiv",
+        "device_id": "ibmq_manila",
+        "job_id": "czz76zv6rr3g008mmc4g",
+        "optimization_level": 1,
+        "error": null,
+        "status": "DONE",
+        "execution_time": 61.37159729003906
+      }
+    }
+  ],
+  "timestamp": "2025-04-15T14:57:02.484866",
+  "best_parameters": {
+    "shots": 4096,
+    "optimization_level": 3,
+    "layout_method": "dense",
+    "routing_method": "basic",
+    "scheduling": "alap",
+    "transpiler_seed": 987
+  },
+  "improvement_metrics": {
+    "score_improvement": "0.77%",
+    "entropy_improvement": "0.77%",
+    "original_score": 1.8247094464584852,
+    "finetuned_score": 1.8387003227464913
+  },
+  "used_hardware": true
+}
