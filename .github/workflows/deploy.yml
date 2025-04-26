@@ -219,7 +219,7 @@ jobs:
       #       echo "No microservice directory to commit for $BASE_NAME"
       #     fi
 
-  run-microservice-tests:
+  docker-upload:
     # Run tests after they are generated
     needs: [setup, generate-microservice]
     runs-on: ubuntu-latest
@@ -257,6 +257,10 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
+      - name: Get Repository Name
+        id: repo_name
+        run: echo "REPO_NAME=$(echo '${{ github.repository }}' | cut -d '/' -f 2)" >> $GITHUB_ENV
+
       - name: Build and push FRONTEND multi-platform Docker image
         uses: docker/build-push-action@v6
         with:
@@ -264,7 +268,7 @@ jobs:
           file: ./microservice/Dockerfile # Assumes Dockerfile is directly in frontend/
           platforms: linux/amd64,linux/arm64
           push: true
-          tags: abhishekt/quantum-app-as-a-service:latest # Use the specific tag from your manifest
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.REPO_NAME }}:latest # Use the specific tag from your manifest
 
        
       # - name: Install dependencies
@@ -316,7 +320,7 @@ jobs:
   
   package:
     # Depends on service tests running and resource estimation for metadata
-    needs: run-microservice-tests
+    needs: setup
     runs-on: ubuntu-latest
     strategy:
       matrix:

@@ -1199,6 +1199,59 @@ jobs:
             echo "No microservice directory to commit for $BASE_NAME"
           fi
 
+  
+  docker-upload:
+    # Run tests after they are generated
+    needs: [setup, generate-microservice]
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        source_file: ${{ fromJson(needs.setup.outputs.source_files) }}
+      fail-fast: true # Allow other service tests to run
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+          ref: ${{ github.ref }}
+      - name: Update repository with latest changes
+        run: |
+          git pull origin ${{ github.ref }} --no-rebase
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Restore Python dependencies cache
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}-quantum-sdk
+          restore-keys: |
+            ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}-
+            ${{ runner.os }}-pip-
+      - name: Set up Docker Buildx (required for service test run)
+        uses: docker/setup-buildx-action@v3
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Get Repository Name
+        id: repo_name
+        run: echo "REPO_NAME=$(echo '${{ github.repository }}' | cut -d '/' -f 2)" >> $GITHUB_ENV
+
+      - name: Build and push FRONTEND multi-platform Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./microservice # Set context to frontend directory
+          file: ./microservice/Dockerfile # Assumes Dockerfile is directly in frontend/
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.REPO_NAME }}:latest # Use the specific tag from your manifest
+
+  
   run-microservice-tests:
     # Run tests after they are generated
     needs: [setup, generate-microservice]
