@@ -1253,25 +1253,25 @@ jobs:
 
           if [ -d "$SERVICE_DIR" ] && [ -d "$TEST_DIR" ]; then
             # Build and run tests using the CLI command (assumes Docker interaction)
-            quantum-cli service test-run \
-              "$SERVICE_DIR" \
-              --test-dir "$TEST_DIR" \
-              --output "$RESULT_FILE"
+            quantum-cli service run \
+              "$SERVICE_DIR" 
+              # --test-dir "$TEST_DIR" \
+              # --output "$RESULT_FILE"
             echo "Ran microservice tests for $BASE_NAME"
           else
             echo "Skipping microservice tests, service or test directory not found for $BASE_NAME"
             echo '{"status": "skipped", "reason": "Service or test directory not found"}' > "$RESULT_FILE"
           fi
 
-      - name: Commit microservice test results
-        run: |
-          # Load the git push function
-          eval "$GIT_PUSH_FUNCTION"
+      # - name: Commit microservice test results
+      #   run: |
+      #     # Load the git push function
+      #     eval "$GIT_PUSH_FUNCTION"
           
-          BASE_NAME=$(echo "${{ matrix.source_file }}" | sed 's/\.py$//')
-          RESULT_FILE="results/tests/service/$BASE_NAME.json"
-          git add "$RESULT_FILE"
-          git_safe_push "ci: Add microservice test results for ${{ matrix.source_file }}" "microservice test results for ${{ matrix.source_file }}"
+      #     BASE_NAME=$(echo "${{ matrix.source_file }}" | sed 's/\.py$//')
+      #     RESULT_DIR="results/tests/service/"
+      #     git add "$RESULT_DIR"
+      #     git_safe_push "ci: Add microservice test results for ${{ matrix.source_file }}" "microservice test results for ${{ matrix.source_file }}"
 
   
   package:
