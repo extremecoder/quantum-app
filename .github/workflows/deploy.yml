@@ -362,18 +362,19 @@ jobs:
           BASE_NAME=$(echo "${{ matrix.source_file }}" | sed 's/\.py$//')
           # SERVICE_DIR="services/generated/$BASE_NAME"
           SERVICE_DIR="microservice"
+          SOURCE_DIR="source/circuits"
           CIRCUIT_FILE="ir/openqasm/mitigated/$BASE_NAME.qasm"
           # Use standardized resource estimation path
-          METADATA_FILE="results/analysis/resources/$BASE_NAME.json"
+          METADATA_FILE="quantum_manifest.json"
           OUTPUT_PATH="dist/$BASE_NAME.zip"
           mkdir -p dist
 
           # Check required files exist before packaging
           if [ -d "$SERVICE_DIR" ] && [ -f "$CIRCUIT_FILE" ] && [ -f "$METADATA_FILE" ]; then
             quantum-cli package create \
-              --source-dir "$SERVICE_DIR" \
+              --source-dir "$SOURCE_DIR" \
               --circuit-file "$CIRCUIT_FILE" \
-              # --metadata-file "$METADATA_FILE" \
+              --metadata-file "$METADATA_FILE" \
               --output-path "$OUTPUT_PATH"
             echo "Packaged application for $BASE_NAME"
           else
