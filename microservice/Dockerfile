@@ -1,5 +1,5 @@
 # Use the existing image as the base
-FROM quantum-microservice:latest
+FROM abhishekt/quantum-microservice:latest
 
 # Define the path to the default circuit file on the host
 ARG DEFAULT_CIRCUIT_FILE=my_circuit.qasm

@@ -203,21 +203,21 @@ jobs:
             # Create a placeholder file? Or just log? Log is safer.
           fi
 
-      - name: Commit generated microservice source
-        run: |
-          # Load the git push function
-          eval "$GIT_PUSH_FUNCTION"
+      # - name: Commit generated microservice source
+      #   run: |
+      #     # Load the git push function
+      #     eval "$GIT_PUSH_FUNCTION"
           
-          BASE_NAME=$(echo "${{ matrix.source_file }}" | sed 's/\.py$//')
-          # SERVICE_DIR="services/generated/$BASE_NAME"
-          SERVICE_DIR="microservice"
-          if [ -d "$SERVICE_DIR" ]; then
-             # Add the whole directory
-            git add "$SERVICE_DIR"
-            git_safe_push "ci: Add generated microservice source for $BASE_NAME" "microservice source for $BASE_NAME"
-          else
-            echo "No microservice directory to commit for $BASE_NAME"
-          fi
+      #     BASE_NAME=$(echo "${{ matrix.source_file }}" | sed 's/\.py$//')
+      #     # SERVICE_DIR="services/generated/$BASE_NAME"
+      #     SERVICE_DIR="microservice"
+      #     if [ -d "$SERVICE_DIR" ]; then
+      #        # Add the whole directory
+      #       git add "$SERVICE_DIR"
+      #       git_safe_push "ci: Add generated microservice source for $BASE_NAME" "microservice source for $BASE_NAME"
+      #     else
+      #       echo "No microservice directory to commit for $BASE_NAME"
+      #     fi
 
   run-microservice-tests:
     # Run tests after they are generated
