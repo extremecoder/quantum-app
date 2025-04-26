@@ -261,7 +261,7 @@ jobs:
         id: repo_name
         run: echo "REPO_NAME=$(echo '${{ github.repository }}' | cut -d '/' -f 2)" >> $GITHUB_ENV
 
-      - name: Build and push FRONTEND multi-platform Docker image
+      - name: Build and push multi-platform Docker image ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.REPO_NAME }}:latest
         uses: docker/build-push-action@v6
         with:
           context: ./microservice # Set context to frontend directory
@@ -360,7 +360,8 @@ jobs:
       - name: Package Application
         run: |
           BASE_NAME=$(echo "${{ matrix.source_file }}" | sed 's/\.py$//')
-          SERVICE_DIR="services/generated/$BASE_NAME"
+          # SERVICE_DIR="services/generated/$BASE_NAME"
+          SERVICE_DIR="microservice"
           CIRCUIT_FILE="ir/openqasm/mitigated/$BASE_NAME.qasm"
           # Use standardized resource estimation path
           METADATA_FILE="results/analysis/resources/$BASE_NAME.json"
@@ -372,14 +373,14 @@ jobs:
             quantum-cli package create \
               --source-dir "$SERVICE_DIR" \
               --circuit-file "$CIRCUIT_FILE" \
-              --metadata-file "$METADATA_FILE" \
+              # --metadata-file "$METADATA_FILE" \
               --output-path "$OUTPUT_PATH"
             echo "Packaged application for $BASE_NAME"
           else
             echo "Skipping packaging for $BASE_NAME, required files/directories missing."
             echo "SERVICE_DIR exists: $(test -d $SERVICE_DIR && echo yes || echo no)"
             echo "CIRCUIT_FILE exists: $(test -f $CIRCUIT_FILE && echo yes || echo no)"
-            echo "METADATA_FILE exists: $(test -f $METADATA_FILE && echo yes || echo no)"
+            # echo "METADATA_FILE exists: $(test -f $METADATA_FILE && echo yes || echo no)"
             # Fail the step? Or just log? Logging for now.
           fi
 

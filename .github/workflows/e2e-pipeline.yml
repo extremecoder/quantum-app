@@ -1242,7 +1242,7 @@ jobs:
         id: repo_name
         run: echo "REPO_NAME=$(echo '${{ github.repository }}' | cut -d '/' -f 2)" >> $GITHUB_ENV
 
-      - name: Build and push FRONTEND multi-platform Docker image
+      - name: Build and push multi-platform Docker image ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.REPO_NAME }}:latest
         uses: docker/build-push-action@v6
         with:
           context: ./microservice # Set context to frontend directory
