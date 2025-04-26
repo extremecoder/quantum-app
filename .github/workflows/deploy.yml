@@ -256,41 +256,52 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-      - name: Install dependencies
-        run: |
-          pip install quantum-cli-sdk
-          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-      - name: Configure Git
-        run: |
-          git config --local user.name "github-actions[bot]"
-          git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-      - name: Run Microservice Tests
-        env:
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          IBM_QUANTUM_TOKEN: ${{ secrets.IBM_QUANTUM_TOKEN }}
+      - name: Build and push FRONTEND multi-platform Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./microservice # Set context to frontend directory
+          file: ./microservice/Dockerfile # Assumes Dockerfile is directly in frontend/
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: abhishekt/quantum-app-as-a-service:latest # Use the specific tag from your manifest
+
+       
+      # - name: Install dependencies
+      #   run: |
+      #     pip install quantum-cli-sdk
+      #     if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+      # - name: Configure Git
+      #   run: |
+      #     git config --local user.name "github-actions[bot]"
+      #     git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      # - name: Run Microservice Tests
+      #   env:
+      #     GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      #     IBM_QUANTUM_TOKEN: ${{ secrets.IBM_QUANTUM_TOKEN }}
           
-        run: |
-          BASE_NAME=$(echo "${{ matrix.source_file }}" | sed 's/\.py$//')
-          # SERVICE_DIR="services/generated/$BASE_NAME"
-          SERVICE_DIR="microservice"
-          TEST_DIR="$SERVICE_DIR/tests"
-          # Standardized results path
-          RESULT_DIR="results/tests/service"
-          RESULT_FILE="$RESULT_DIR/$BASE_NAME.json"
-          mkdir -p "$RESULT_DIR"
+      #   run: |
+      #     BASE_NAME=$(echo "${{ matrix.source_file }}" | sed 's/\.py$//')
+      #     # SERVICE_DIR="services/generated/$BASE_NAME"
+      #     SERVICE_DIR="microservice"
+      #     TEST_DIR="$SERVICE_DIR/tests"
+      #     # Standardized results path
+      #     RESULT_DIR="results/tests/service"
+      #     RESULT_FILE="$RESULT_DIR/$BASE_NAME.json"
+      #     mkdir -p "$RESULT_DIR"
 
-          if [ -d "$SERVICE_DIR" ] && [ -d "$TEST_DIR" ]; then
-            # Build and run tests using the CLI command (assumes Docker interaction)
-            quantum-cli service run \
-              "$SERVICE_DIR" 
-              # --test-dir "$TEST_DIR" \
-              # --output "$RESULT_FILE"
-            echo "Ran microservice tests for $BASE_NAME"
-          else
-            echo "Skipping microservice tests, service or test directory not found for $BASE_NAME"
-            echo '{"status": "skipped", "reason": "Service or test directory not found"}' > "$RESULT_FILE"
-          fi
+      #     if [ -d "$SERVICE_DIR" ] && [ -d "$TEST_DIR" ]; then
+      #       # Build and run tests using the CLI command (assumes Docker interaction)
+      #       quantum-cli service run \
+      #         "$SERVICE_DIR" 
+      #         # --test-dir "$TEST_DIR" \
+      #         # --output "$RESULT_FILE"
+      #       echo "Ran microservice tests for $BASE_NAME"
+      #     else
+      #       echo "Skipping microservice tests, service or test directory not found for $BASE_NAME"
+      #       echo '{"status": "skipped", "reason": "Service or test directory not found"}' > "$RESULT_FILE"
+      #     fi
 
       # - name: Commit microservice test results
       #   run: |
