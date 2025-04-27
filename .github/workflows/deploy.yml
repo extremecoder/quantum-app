@@ -371,7 +371,7 @@ jobs:
           CIRCUIT_FILE="ir/openqasm/mitigated/$BASE_NAME.qasm"
           # Use standardized resource estimation path
           METADATA_FILE="quantum_manifest.json"
-          OUTPUT_PATH="dist/${{ env.REPO_NAME }}.zip"
+          OUTPUT_PATH="dist/${{ env.REPO_NAME }}-0.0.1.zip"
           mkdir -p dist
 
           # Check required files exist before packaging
