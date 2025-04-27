@@ -367,7 +367,7 @@ jobs:
           BASE_NAME=$(echo "${{ matrix.source_file }}" | sed 's/\.py$//')
           # SERVICE_DIR="services/generated/$BASE_NAME"
           SERVICE_DIR="microservice"
-          SOURCE_DIR="source/circuits"
+          SOURCE_DIR="microservice"
           CIRCUIT_FILE="ir/openqasm/mitigated/$BASE_NAME.qasm"
           # Use standardized resource estimation path
           METADATA_FILE="quantum_manifest.json"
@@ -376,15 +376,17 @@ jobs:
 
           # Check required files exist before packaging
           if [ -d "$SERVICE_DIR" ] && [ -f "$CIRCUIT_FILE" ] && [ -f "$METADATA_FILE" ]; then
+            echo "Packaging application source $SERVICE_DIR"
+            echo "Packaging application destination $OUTPUT_PATH"
             quantum-cli package create \
-              --source-dir "$SOURCE_DIR" \
+              --source-dir "$SERVICE_DIR" \
               --format zip \
               --config quantum_manifest.json \
+              --output-path "$OUTPUT_PATH" \
               --app-name ${{ env.REPO_NAME }} \
               --version 0.0.1 \
               --app-description "Quantum Application for my circuit" \
               
-              --output-path "$OUTPUT_PATH"
             echo "Packaged application for $CIRCUIT_FILE"
           else
             echo "Skipping packaging for $BASE_NAME, required files/directories missing."
@@ -403,9 +405,9 @@ jobs:
           OUTPUT_PATH="dist/${{ env.REPO_NAME }}-0.0.1.zip"
           if [ -f "$OUTPUT_PATH" ]; then
             git add "$OUTPUT_PATH"
-            git_safe_push "ci: Add application package for $BASE_NAME" "package for $BASE_NAME"
+            git_safe_push "ci: Add application package for $OUTPUT_PATH" "package for $OUTPUT_PATH"
           else
-            echo "No package file to commit for $BASE_NAME"
+            echo "No package file to commit for $OUTPUT_PATH"
           fi
 
   publish:
