@@ -203,21 +203,21 @@ jobs:
             # Create a placeholder file? Or just log? Log is safer.
           fi
 
-      # - name: Commit generated microservice source
-      #   run: |
-      #     # Load the git push function
-      #     eval "$GIT_PUSH_FUNCTION"
+      - name: Commit generated microservice source
+        run: |
+          # Load the git push function
+          eval "$GIT_PUSH_FUNCTION"
           
-      #     BASE_NAME=$(echo "${{ matrix.source_file }}" | sed 's/\.py$//')
-      #     # SERVICE_DIR="services/generated/$BASE_NAME"
-      #     SERVICE_DIR="microservice"
-      #     if [ -d "$SERVICE_DIR" ]; then
-      #        # Add the whole directory
-      #       git add "$SERVICE_DIR"
-      #       git_safe_push "ci: Add generated microservice source for $BASE_NAME" "microservice source for $BASE_NAME"
-      #     else
-      #       echo "No microservice directory to commit for $BASE_NAME"
-      #     fi
+          BASE_NAME=$(echo "${{ matrix.source_file }}" | sed 's/\.py$//')
+          # SERVICE_DIR="services/generated/$BASE_NAME"
+          SERVICE_DIR="microservice"
+          if [ -d "$SERVICE_DIR" ]; then
+             # Add the whole directory
+            git add "$SERVICE_DIR"
+            git_safe_push "ci: Add generated microservice source for $BASE_NAME" "microservice source for $BASE_NAME"
+          else
+            echo "No microservice directory to commit for $BASE_NAME"
+          fi
 
   docker-upload:
     # Run tests after they are generated
@@ -261,14 +261,14 @@ jobs:
         id: repo_name
         run: echo "REPO_NAME=$(echo '${{ github.repository }}' | cut -d '/' -f 2)" >> $GITHUB_ENV
 
-      # - name: Build and push multi-platform Docker image ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.REPO_NAME }}:latest
-      #   uses: docker/build-push-action@v6
-      #   with:
-      #     context: ./microservice # Set context to frontend directory
-      #     file: ./microservice/Dockerfile # Assumes Dockerfile is directly in frontend/
-      #     platforms: linux/amd64,linux/arm64
-      #     push: true
-      #     tags: ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.REPO_NAME }}:latest # Use the specific tag from your manifest
+      - name: Build and push multi-platform Docker image ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.REPO_NAME }}:latest
+        uses: docker/build-push-action@v6
+        with:
+          context: ./microservice # Set context to frontend directory
+          file: ./microservice/Dockerfile # Assumes Dockerfile is directly in frontend/
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.REPO_NAME }}:latest # Use the specific tag from your manifest
 
        
       # - name: Install dependencies
