@@ -7,57 +7,57 @@
   "finetuned_results": [
     {
       "success": true,
-      "score": 1.8387003227464913,
-      "entropy": 1.1424487447084284,
+      "score": 2.09896170180565,
+      "entropy": 1.3041582316345453,
       "unique_outcomes": 4,
       "probabilities": {
-        "01": 0.0068359375,
-        "00": 0.482421875,
-        "11": 0.4970703125,
-        "10": 0.013671875
+        "01": 0.0224609375,
+        "00": 0.4345703125,
+        "11": 0.509765625,
+        "10": 0.033203125
       },
       "counts": {
-        "01": 7,
-        "00": 494,
-        "11": 509,
-        "10": 14
+        "01": 23,
+        "00": 445,
+        "11": 522,
+        "10": 34
       },
       "shots": 1024,
       "parameters": {
-        "shots": 4096,
+        "shots": 512,
         "optimization_level": 3,
         "layout_method": "dense",
-        "routing_method": "basic",
-        "scheduling": "alap",
-        "transpiler_seed": 987
+        "routing_method": "stochastic",
+        "scheduling": "asap",
+        "transpiler_seed": 0
       },
       "hardware_metadata": {
         "platform": "ibm",
         "provider": "IBM",
-        "device": "ibm_kyiv",
+        "device": "ibm_sherbrooke",
         "device_id": "ibmq_manila",
-        "job_id": "czz76zv6rr3g008mmc4g",
+        "job_id": "d07mcn2d8drg008sxfv0",
         "optimization_level": 1,
         "error": null,
         "status": "DONE",
-        "execution_time": 61.37159729003906
+        "execution_time": 34.2675518989563
       }
     }
   ],
-  "timestamp": "2025-04-15T14:57:02.484866",
+  "timestamp": "2025-04-28T09:12:33.456214",
   "best_parameters": {
-    "shots": 4096,
+    "shots": 512,
     "optimization_level": 3,
     "layout_method": "dense",
-    "routing_method": "basic",
-    "scheduling": "alap",
-    "transpiler_seed": 987
+    "routing_method": "stochastic",
+    "scheduling": "asap",
+    "transpiler_seed": 0
   },
   "improvement_metrics": {
-    "score_improvement": "0.77%",
-    "entropy_improvement": "0.77%",
-    "original_score": 1.8247094464584852,
-    "finetuned_score": 1.8387003227464913
+    "score_improvement": "8.98%",
+    "entropy_improvement": "8.98%",
+    "original_score": 1.9260897988809063,
+    "finetuned_score": 2.09896170180565
   },
   "used_hardware": true
 }
