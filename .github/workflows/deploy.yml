@@ -26,6 +26,10 @@ on:
         required: false
         # Default to 1024 if not provided via dispatch
         default: '1024'
+      version:
+        description: 'Application version (e.g. 1.2.3)'
+        required: true
+        default: '0.0.1'
 
 # Grant GITHUB_TOKEN the permissions required to make a Pages deployment
 permissions:
@@ -72,6 +76,7 @@ env:
       done
     }
   PYTHON_VERSION: '3.10'
+  APP_VERSION: ${{ github.event.inputs.version }}
 
 jobs:
   setup:
@@ -321,6 +326,8 @@ jobs:
   package:
     # Depends on service tests running and resource estimation for metadata
     needs: setup
+    env:
+      APP_VERSION: ${{ github.event.inputs.version }}
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -371,7 +378,7 @@ jobs:
           CIRCUIT_FILE="ir/openqasm/mitigated/$BASE_NAME.qasm"
           # Use standardized resource estimation path
           METADATA_FILE="quantum_manifest.json"
-          OUTPUT_PATH="dist/${{ env.REPO_NAME }}-0.0.1.zip"
+          OUTPUT_PATH="dist/${{ env.REPO_NAME }}-${{ env.APP_VERSION }}.zip"
           mkdir -p dist
 
           # Check required files exist before packaging
@@ -384,7 +391,7 @@ jobs:
               --config quantum_manifest.json \
               --output-path "$OUTPUT_PATH" \
               --app-name ${{ env.REPO_NAME }} \
-              --version 0.0.1 \
+              --version ${{ env.APP_VERSION }} \
               --app-description "Quantum Application for my circuit" \
               
             echo "Packaged application for $CIRCUIT_FILE"
@@ -402,7 +409,7 @@ jobs:
           eval "$GIT_PUSH_FUNCTION"
           
           BASE_NAME=$(echo "${{ matrix.source_file }}" | sed 's/\.py$//')
-          OUTPUT_PATH="dist/${{ env.REPO_NAME }}-0.0.1.zip"
+          OUTPUT_PATH="dist/${{ env.REPO_NAME }}-${{ env.APP_VERSION }}.zip"
           if [ -f "$OUTPUT_PATH" ]; then
             git add "$OUTPUT_PATH"
             git_safe_push "ci: Add application package for $OUTPUT_PATH" "package for $OUTPUT_PATH"

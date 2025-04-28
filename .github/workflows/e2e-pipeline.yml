@@ -26,6 +26,10 @@ on:
         required: false
         # Default to 1024 if not provided via dispatch
         default: '1024'
+      version:
+        description: 'Application version (e.g. 1.2.3)'
+        required: true
+        default: '0.0.1'
 
 # Grant GITHUB_TOKEN the permissions required to make a Pages deployment
 permissions:
@@ -1329,12 +1333,14 @@ jobs:
   
   package:
     # Depends on service tests running and resource estimation for metadata
-    needs: [run-tests, resource-estimation]
+    needs: setup
     runs-on: ubuntu-latest
     strategy:
       matrix:
         source_file: ${{ fromJson(needs.setup.outputs.source_files) }}
       fail-fast: false
+    env:
+      APP_VERSION: ${{ github.event.inputs.version }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -1366,29 +1372,42 @@ jobs:
           git config --local user.name "github-actions[bot]"
           git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
+      
+      - name: Get Repository Name
+        id: repo_name
+        run: echo "REPO_NAME=$(echo '${{ github.repository }}' | cut -d '/' -f 2)" >> $GITHUB_ENV
+      
       - name: Package Application
         run: |
           BASE_NAME=$(echo "${{ matrix.source_file }}" | sed 's/\.py$//')
-          SERVICE_DIR="services/generated/$BASE_NAME"
+          # SERVICE_DIR="services/generated/$BASE_NAME"
+          SERVICE_DIR="microservice"
+          SOURCE_DIR="microservice"
           CIRCUIT_FILE="ir/openqasm/mitigated/$BASE_NAME.qasm"
           # Use standardized resource estimation path
-          METADATA_FILE="results/analysis/resources/$BASE_NAME.json"
-          OUTPUT_PATH="dist/$BASE_NAME.zip"
+          METADATA_FILE="quantum_manifest.json"
+          OUTPUT_PATH="dist/${{ env.REPO_NAME }}-${{ env.APP_VERSION }}.zip"
           mkdir -p dist
 
           # Check required files exist before packaging
           if [ -d "$SERVICE_DIR" ] && [ -f "$CIRCUIT_FILE" ] && [ -f "$METADATA_FILE" ]; then
+            echo "Packaging application source $SERVICE_DIR"
+            echo "Packaging application destination $OUTPUT_PATH"
             quantum-cli package create \
               --source-dir "$SERVICE_DIR" \
-              --circuit-file "$CIRCUIT_FILE" \
-              --metadata-file "$METADATA_FILE" \
-              --output-path "$OUTPUT_PATH"
-            echo "Packaged application for $BASE_NAME"
+              --format zip \
+              --config quantum_manifest.json \
+              --output-path "$OUTPUT_PATH" \
+              --app-name ${{ env.REPO_NAME }} \
+              --version ${{ env.APP_VERSION }} \
+              --app-description "Quantum Application for my circuit" \
+              
+            echo "Packaged application for $CIRCUIT_FILE"
           else
             echo "Skipping packaging for $BASE_NAME, required files/directories missing."
             echo "SERVICE_DIR exists: $(test -d $SERVICE_DIR && echo yes || echo no)"
             echo "CIRCUIT_FILE exists: $(test -f $CIRCUIT_FILE && echo yes || echo no)"
-            echo "METADATA_FILE exists: $(test -f $METADATA_FILE && echo yes || echo no)"
+            # echo "METADATA_FILE exists: $(test -f $METADATA_FILE && echo yes || echo no)"
             # Fail the step? Or just log? Logging for now.
           fi
 
@@ -1398,12 +1417,12 @@ jobs:
           eval "$GIT_PUSH_FUNCTION"
           
           BASE_NAME=$(echo "${{ matrix.source_file }}" | sed 's/\.py$//')
-          OUTPUT_PATH="dist/$BASE_NAME.zip"
+          OUTPUT_PATH="dist/${{ env.REPO_NAME }}-${{ env.APP_VERSION }}.zip"
           if [ -f "$OUTPUT_PATH" ]; then
             git add "$OUTPUT_PATH"
-            git_safe_push "ci: Add application package for $BASE_NAME" "package for $BASE_NAME"
+            git_safe_push "ci: Add application package for $OUTPUT_PATH" "package for $OUTPUT_PATH"
           else
-            echo "No package file to commit for $BASE_NAME"
+            echo "No package file to commit for $OUTPUT_PATH"
           fi
 
   publish:
