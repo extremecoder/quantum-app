@@ -1425,95 +1425,95 @@ jobs:
             echo "No package file to commit for $OUTPUT_PATH"
           fi
 
-  publish:
-    # Depends on the package being created
-    needs: package
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        source_file: ${{ fromJson(needs.setup.outputs.source_files) }}
-      fail-fast: false
-    # Only run on pushes to main/master, not on PRs by default
-    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
-    steps:
-      - name: Checkout repository (needed to find package)
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0 # Fetch history if needed, maybe shallow is fine
-          token: ${{ secrets.GITHUB_TOKEN }}
-          ref: ${{ github.ref }}
-      - name: Update repository with latest changes
-        run: |
-          git pull origin ${{ github.ref }} --no-rebase
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-      - name: Restore Python dependencies cache
-        uses: actions/cache@v3
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}-quantum-sdk
-          restore-keys: |
-            ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}-
-            ${{ runner.os }}-pip-
-      - name: Install dependencies
-        run: |
-          pip install quantum-cli-sdk
-          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+  # publish:
+  #   # Depends on the package being created
+  #   needs: package
+  #   runs-on: ubuntu-latest
+  #   strategy:
+  #     matrix:
+  #       source_file: ${{ fromJson(needs.setup.outputs.source_files) }}
+  #     fail-fast: false
+  #   # Only run on pushes to main/master, not on PRs by default
+  #   if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+  #   steps:
+  #     - name: Checkout repository (needed to find package)
+  #       uses: actions/checkout@v4
+  #       with:
+  #         fetch-depth: 0 # Fetch history if needed, maybe shallow is fine
+  #         token: ${{ secrets.GITHUB_TOKEN }}
+  #         ref: ${{ github.ref }}
+  #     - name: Update repository with latest changes
+  #       run: |
+  #         git pull origin ${{ github.ref }} --no-rebase
+  #     - name: Set up Python
+  #       uses: actions/setup-python@v4
+  #       with:
+  #         python-version: ${{ env.PYTHON_VERSION }}
+  #     - name: Restore Python dependencies cache
+  #       uses: actions/cache@v3
+  #       with:
+  #         path: ~/.cache/pip
+  #         key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}-quantum-sdk
+  #         restore-keys: |
+  #           ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}-
+  #           ${{ runner.os }}-pip-
+  #     - name: Install dependencies
+  #       run: |
+  #         pip install quantum-cli-sdk
+  #         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
 
-      - name: Publish Application to Quantum Hub
-        env:
-          # Use secrets for credentials
-          QUANTUM_HUB_USERNAME: ${{ secrets.QUANTUM_HUB_USERNAME }}
-          QUANTUM_HUB_TOKEN: ${{ secrets.QUANTUM_HUB_TOKEN }}
-        run: |
-          BASE_NAME=$(echo "${{ matrix.source_file }}" | sed 's/\.py$//')
-          PACKAGE_PATH="dist/$BASE_NAME.zip"
+  #     - name: Publish Application to Quantum Hub
+  #       env:
+  #         # Use secrets for credentials
+  #         QUANTUM_HUB_USERNAME: ${{ secrets.QUANTUM_HUB_USERNAME }}
+  #         QUANTUM_HUB_TOKEN: ${{ secrets.QUANTUM_HUB_TOKEN }}
+  #       run: |
+  #         BASE_NAME=$(echo "${{ matrix.source_file }}" | sed 's/\.py$//')
+  #         PACKAGE_PATH="dist/$BASE_NAME.zip"
 
-          # Check if credentials and package exist
-          if [ -z "${QUANTUM_HUB_USERNAME}" ] || [ -z "${QUANTUM_HUB_TOKEN}" ]; then
-            echo "Quantum Hub credentials (QUANTUM_HUB_USERNAME, QUANTUM_HUB_TOKEN) not found in secrets. Skipping publish step."
-          elif [ ! -f "$PACKAGE_PATH" ]; then
-            echo "Package file not found at $PACKAGE_PATH. Skipping publish step."
-          else
-            # Publish to Quantum Hub
-            quantum-cli hub publish \
-              "$PACKAGE_PATH" \
-              --username "${QUANTUM_HUB_USERNAME}" \
-              --token "${QUANTUM_HUB_TOKEN}"
-            echo "Published $PACKAGE_PATH to Quantum Hub"
-          fi
+  #         # Check if credentials and package exist
+  #         if [ -z "${QUANTUM_HUB_USERNAME}" ] || [ -z "${QUANTUM_HUB_TOKEN}" ]; then
+  #           echo "Quantum Hub credentials (QUANTUM_HUB_USERNAME, QUANTUM_HUB_TOKEN) not found in secrets. Skipping publish step."
+  #         elif [ ! -f "$PACKAGE_PATH" ]; then
+  #           echo "Package file not found at $PACKAGE_PATH. Skipping publish step."
+  #         else
+  #           # Publish to Quantum Hub
+  #           quantum-cli hub publish \
+  #             "$PACKAGE_PATH" \
+  #             --username "${QUANTUM_HUB_USERNAME}" \
+  #             --token "${QUANTUM_HUB_TOKEN}"
+  #           echo "Published $PACKAGE_PATH to Quantum Hub"
+  #         fi
 
-  #Optional: Job to delete the enhanced pipeline file if this one is stable
-  cleanup-old-pipeline:
-    needs: [publish] # Run after everything else successfully finishes
-    runs-on: ubuntu-latest
-    if: success() && (github.event_name == 'push' && github.ref == 'refs/heads/main') # Only on successful push to main
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          ref: ${{ github.ref }}
-      - name: Update repository with latest changes
-        run: |
-          git pull origin ${{ github.ref }} --no-rebase
-      - name: Configure Git
-        run: |
-          git config --local user.name "github-actions[bot]"
-          git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
-      - name: Remove old pipeline file
-        run: |
-          # Load the git push function
-          eval "$GIT_PUSH_FUNCTION"
+  # #Optional: Job to delete the enhanced pipeline file if this one is stable
+  # cleanup-old-pipeline:
+  #   needs: [publish] # Run after everything else successfully finishes
+  #   runs-on: ubuntu-latest
+  #   if: success() && (github.event_name == 'push' && github.ref == 'refs/heads/main') # Only on successful push to main
+  #   steps:
+  #     - name: Checkout repository
+  #       uses: actions/checkout@v4
+  #       with:
+  #         token: ${{ secrets.GITHUB_TOKEN }}
+  #         ref: ${{ github.ref }}
+  #     - name: Update repository with latest changes
+  #       run: |
+  #         git pull origin ${{ github.ref }} --no-rebase
+  #     - name: Configure Git
+  #       run: |
+  #         git config --local user.name "github-actions[bot]"
+  #         git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
+  #     - name: Remove old pipeline file
+  #       run: |
+  #         # Load the git push function
+  #         eval "$GIT_PUSH_FUNCTION"
           
-          OLD_PIPELINE=".github/workflows/e2e-enhanced-pipeline.yml"
-          if [ -f "$OLD_PIPELINE" ]; then
-            git rm "$OLD_PIPELINE"
-            git_safe_push "ci: Remove redundant e2e-enhanced-pipeline.yml workflow" "removing old pipeline file"
-            echo "Removed $OLD_PIPELINE."
-          else
-            echo "$OLD_PIPELINE not found, skipping removal."
-          fi
+  #         OLD_PIPELINE=".github/workflows/e2e-enhanced-pipeline.yml"
+  #         if [ -f "$OLD_PIPELINE" ]; then
+  #           git rm "$OLD_PIPELINE"
+  #           git_safe_push "ci: Remove redundant e2e-enhanced-pipeline.yml workflow" "removing old pipeline file"
+  #           echo "Removed $OLD_PIPELINE."
+  #         else
+  #           echo "$OLD_PIPELINE not found, skipping removal."
+  #         fi
 
